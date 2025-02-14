@@ -1,1 +1,0 @@
-Outputs for Mainnet scripts.
