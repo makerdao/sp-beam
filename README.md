@@ -18,7 +18,6 @@ The DSPC module provides a streamlined way to modify stability parameters in the
 - Rate change constraints:
   - Min/max caps per rate
   - Maximum change (gap) per update
-- Timelock for all rate changes
 - Event emission for all actions
 - Simple, auditable implementation
 
@@ -67,7 +66,7 @@ dspc.file("DSR", "step", 50);  // Max change: 0.5%
 dspc.kiss(facilitatorAddress);
 ```
 
-4. Propose a batch of rate changes:
+4. Execute a batch of rate changes:
 ```solidity
 DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
 updates[0] = DSPC.ParamChange("ETH-A", 150);  // Set ETH-A rate to 1.5%
@@ -75,17 +74,11 @@ updates[1] = DSPC.ParamChange("DSR", 75);     // Set DSR to 0.75%
 dspc.put(updates);
 ```
 
-5. After the timelock period, execute the changes:
-```solidity
-dspc.zap();
-```
-
 ## Security
 
 The module implements a robust security model:
 - Two-level access control (admins and facilitators)
 - Rate constraints to prevent extreme changes
-- Timelock for all rate modifications
 - Disabling without GSM delay via DSPCMom contract
 - Circuit breaker (halt) functionality
 - All actions emit events for transparency

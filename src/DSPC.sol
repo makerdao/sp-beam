@@ -1,27 +1,51 @@
+// SPDX-FileCopyrightText: 2025 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.24;
 
 interface JugLike {
     function file(bytes32 ilk, bytes32 what, uint256 data) external;
-    function ilks(bytes32) external view returns (uint256 duty, uint256 rho);
+    function ilks(bytes32 ilk) external view returns (uint256 duty, uint256 rho);
+    function drip(bytes32 ilk) external;
 }
 
 interface PotLike {
     function file(bytes32 what, uint256 data) external;
     function dsr() external view returns (uint256);
+    function drip() external;
 }
 
 interface SUSDSLike {
     function file(bytes32 what, uint256 data) external;
     function ssr() external view returns (uint256);
+    function drip() external;
 }
 
 interface ConvLike {
-    function turn(uint256 bps) external pure returns (uint256 ray);
+    function btor(uint256 bps) external pure returns (uint256 ray);
+    function rtob(uint256 ray) external pure returns (uint256 bps);
 }
 
 /// @title Direct Stability Parameters Change Module
 /// @notice A module that allows direct changes to stability parameters with constraints
+/// @dev This contract manages stability parameters for ilks, DSR, and SSR with configurable limits
+/// @custom:authors [Oddaf]
+/// @custom:reviewers []
+/// @custom:auditors []
+/// @custom:bounties []
 contract DSPC {
     // --- Structs ---
     struct Cfg {
@@ -35,16 +59,15 @@ contract DSPC {
         uint256 bps; // New rate in basis points
     }
 
-    // --- Constants ---
-    uint256 internal constant RAY = 10 ** 27;
-    uint256 internal constant WAD = 10 ** 18;
-    uint256 internal constant BASIS_POINTS = 100_00;
-
     // --- Immutables ---
-    JugLike public immutable jug; // Stability fee rates
-    PotLike public immutable pot; // DSR rate
-    SUSDSLike public immutable susds; // SSR rate
-    ConvLike public immutable conv; // Rate conversion utility
+    /// @notice Stability fee rates
+    JugLike public immutable jug;
+    /// @notice DSR rate
+    PotLike public immutable pot;
+    /// @notice SSR rate
+    SUSDSLike public immutable susds;
+    /// @notice Rate conversion utility
+    ConvLike public immutable conv;
 
     // --- Storage Variables ---
     /// @notice Mapping of admin addresses
@@ -53,25 +76,48 @@ contract DSPC {
     mapping(address => uint256) public buds;
     /// @notice Mapping of rate constraints
     mapping(bytes32 => Cfg) private _cfgs;
-    /// @notice Pending rate updates
-    ParamChange[] private _batch;
     /// @notice Circuit breaker flag
-    uint8 public bad;
-    /// @notice Timelock duration
-    uint32 public lag;
-    /// @notice Timestamp when current batch can be executed
-    uint64 public eta;
+    uint256 public bad;
 
     // --- Events ---
+    /**
+     * @notice `usr` was granted admin access.
+     * @param usr The user address.
+     */
     event Rely(address indexed usr);
+    /**
+     * @notice `usr` admin access was revoked.
+     * @param usr The user address.
+     */
     event Deny(address indexed usr);
+    /**
+     * @notice `usr` was granted permission to change rates (call put()).
+     * @param usr The user address.
+     */
     event Kiss(address indexed usr);
+    /**
+     * @notice Permission revoked for `usr` to change rates (call put()).
+     * @param usr The user address.
+     */
     event Diss(address indexed usr);
+    /**
+     * @notice A contract parameter was updated.
+     * @param what The changed parameter name. ["bad"].
+     * @param data The new value of the parameter.
+     */
     event File(bytes32 indexed what, uint256 data);
+    /**
+     * @notice A Ilk/DSR/SSR parameter was updated.
+     * @param id The Ilk/DSR/SSR identifier.
+     * @param what The changed parameter name. ["bad"].
+     * @param data The new value of the parameter.
+     */
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
-    event Put(ParamChange[] updates, uint256 eta);
-    event Pop(ParamChange[] updates);
-    event Zap(ParamChange[] updates);
+    /**
+     * @notice A batch of rate changes was executed.
+     * @param updates Array of rate updates.
+     */
+    event Put(ParamChange[] updates);
 
     // --- Modifiers ---
     modifier auth() {
@@ -90,6 +136,10 @@ contract DSPC {
     }
 
     /// @notice Constructor sets the core contracts
+    /// @param _jug The Jug contract for managing stability fees
+    /// @param _pot The Pot contract for managing DSR
+    /// @param _susds The SUSDS contract for managing SSR
+    /// @param _conv The conversion utility contract for rate calculations
     constructor(address _jug, address _pot, address _susds, address _conv) {
         jug = JugLike(_jug);
         pot = PotLike(_pot);
@@ -103,6 +153,7 @@ contract DSPC {
     // --- Administration ---
     /// @notice Grant authorization to an address
     /// @param usr The address to be authorized
+    /// @dev Sets wards[usr] to 1 and emits Rely event
     function rely(address usr) external auth {
         wards[usr] = 1;
         emit Rely(usr);
@@ -110,6 +161,7 @@ contract DSPC {
 
     /// @notice Revoke authorization from an address
     /// @param usr The address to be deauthorized
+    /// @dev Sets wards[usr] to 0 and emits Deny event
     function deny(address usr) external auth {
         wards[usr] = 0;
         emit Deny(usr);
@@ -117,7 +169,7 @@ contract DSPC {
 
     /// @notice Add a facilitator
     /// @param usr The address to add as a facilitator
-    /// @dev Facilitators can propose rate updates but cannot modify system parameters
+    /// @dev Sets buds[usr] to 1 and emits Kiss event. Facilitators can propose rate updates but cannot modify system parameters
     function kiss(address usr) external auth {
         buds[usr] = 1;
         emit Kiss(usr);
@@ -125,34 +177,34 @@ contract DSPC {
 
     /// @notice Remove a facilitator
     /// @param usr The address to remove as a facilitator
+    /// @dev Sets buds[usr] to 0 and emits Diss event
     function diss(address usr) external auth {
         buds[usr] = 0;
         emit Diss(usr);
     }
 
     /// @notice Configure module parameters
+    /// @param what The parameter to configure (only "bad" is supported)
+    /// @param data The value to set (must be 0 or 1 for "bad")
+    /// @dev Emits File event after successful configuration
     function file(bytes32 what, uint256 data) external auth {
-        if (what == "lag") {
-            require(data <= type(uint32).max, "DSPC/lag-overflow");
-            lag = uint32(data);
-        } else if (what == "bad") {
+        if (what == "bad") {
             require(data <= 1, "DSPC/invalid-bad-value");
-            bad = uint8(data);
+            bad = data;
         } else {
             revert("DSPC/file-unrecognized-param");
         }
-
-        // Clear any pending batch when configs change
-        _pop();
 
         emit File(what, data);
     }
 
     /// @notice Configure constraints for a rate
+    /// @param id The rate identifier (ilk name, "DSR", or "SSR")
+    /// @param what The parameter to configure ("min", "max", or "step")
+    /// @param data The value to set (must be greater than 0)
+    /// @dev Emits File event after successful configuration
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
-        require(data <= type(uint16).max, "DSPC/overflow");
         if (what == "min") {
-            require(data > 0, "DSPC/invalid-min");
             _cfgs[id].min = uint16(data);
         } else if (what == "max") {
             require(data > 0, "DSPC/invalid-max");
@@ -164,28 +216,18 @@ contract DSPC {
             revert("DSPC/file-unrecognized-param");
         }
 
-        // Clear any pending batch when configs change
-        _pop();
-
         emit File(id, what, data);
     }
 
-    /// @notice Cancel a pending batch
-    function pop() external toll good {
-        _pop();
-    }
-
-    /// @notice Internal function to cancel a pending batch
-    /// @dev Clears the pending batch and resets the activation time
-    function _pop() internal {
-        if (_batch.length > 0) {
-            emit Pop(_batch);
-            delete _batch;
-            eta = 0;
-        }
-    }
-
-    /// @notice Schedule a batch of rate updates
+    /// @notice Apply rate updates
+    /// @param updates Array of rate updates to apply
+    /// @dev Each update is validated against configured constraints before being applied
+    /// @dev Emits Put event after all updates are successfully applied
+    /// @dev Reverts if:
+    ///      - Empty updates array
+    ///      - Rate below configured minimum
+    ///      - Rate above configured maximum
+    ///      - Rate change exceeds configured step size
     function put(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
 
@@ -201,112 +243,48 @@ contract DSPC {
             // Check rate change is within allowed gap
             uint256 oldBps;
             if (id == "DSR") {
-                oldBps = _back(PotLike(pot).dsr());
+                oldBps = conv.rtob(PotLike(pot).dsr());
             } else if (id == "SSR") {
-                oldBps = _back(SUSDSLike(susds).ssr());
+                oldBps = conv.rtob(SUSDSLike(susds).ssr());
             } else {
                 (uint256 duty,) = JugLike(jug).ilks(id);
-                oldBps = _back(duty);
+                oldBps = conv.rtob(duty);
             }
 
-            uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
+            uint256 delta = _absDiff(bps, oldBps);
             require(delta <= cfg.step, "DSPC/delta-above-step");
-        }
 
-        // Store the batch
-        delete _batch;
-        for (uint256 i = 0; i < updates.length; i++) {
-            _batch.push(updates[i]);
-        }
-        eta = uint64(block.timestamp + lag);
-
-        emit Put(updates, eta);
-    }
-
-    /// @notice Internal function to convert a per-second rate to basis points
-    /// @param ray The per-second rate to convert
-    /// @return bps The rate in basis points
-    function _back(uint256 ray) internal pure returns (uint256 bps) {
-        // Convert per-second rate to per-year rate using rpow
-        uint256 yearlyRate = _rpow(ray, 365 days);
-        // Subtract RAY to get the yearly rate delta and convert to basis points
-        // Add RAY/2 for rounding: ensures values are rounded up when >= 0.5 and down when < 0.5
-        return ((yearlyRate - RAY) * BASIS_POINTS + RAY / 2) / RAY;
-    }
-
-    /// @notice Internal function to calculate the result of a rate raised to a power
-    /// @param x The base rate
-    /// @param n The exponent
-    /// @return z The result of x raised to the power of n
-    function _rpow(uint256 x, uint256 n) internal pure returns (uint256 z) {
-        assembly {
-            switch x
-            case 0 {
-                switch n
-                case 0 { z := RAY }
-                default { z := 0 }
-            }
-            default {
-                switch mod(n, 2)
-                case 0 { z := RAY }
-                default { z := x }
-                let half := div(RAY, 2) // for rounding.
-                for { n := div(n, 2) } n { n := div(n, 2) } {
-                    let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0, 0) }
-                    let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0, 0) }
-                    x := div(xxRound, RAY)
-                    if mod(n, 2) {
-                        let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0, 0) }
-                        let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0, 0) }
-                        z := div(zxRound, RAY)
-                    }
-                }
-            }
-        }
-    }
-
-    /// @notice Execute a pending batch
-    function zap() external good {
-        require(_batch.length > 0, "DSPC/no-pending-batch");
-        require(block.timestamp >= eta, "DSPC/batch-not-ready");
-
-        ParamChange[] memory updates = _batch;
-
-        // Execute all updates
-        for (uint256 i = 0; i < updates.length; i++) {
-            bytes32 id = updates[i].id;
-            uint256 ray = conv.turn(updates[i].bps);
-
+            // Execute the update
+            uint256 ray = conv.btor(bps);
             if (id == "DSR") {
+                pot.drip();
                 pot.file("dsr", ray);
             } else if (id == "SSR") {
+                susds.drip();
                 susds.file("ssr", ray);
             } else {
+                jug.drip(id);
                 jug.file(id, "duty", ray);
             }
         }
 
-        delete _batch;
-        eta = 0;
-        emit Zap(updates);
+        emit Put(updates);
+    }
+
+    /// @notice Calculates absolute difference between two uint256 values
+    /// @param a The first uint256 value
+    /// @param b The second uint256 value
+    /// @return delta The absolute difference between the parameters
+    function _absDiff(uint256 a, uint256 b) internal pure returns (uint256 delta) {
+        delta = a > b ? a - b : b - a;
     }
 
     // --- Getters ---
     /// @notice Get configuration for a rate
-    /// @param id The rate identifier
-    /// @return The configuration struct
+    /// @param id The rate identifier (ilk name, "DSR", or "SSR")
+    /// @return The configuration struct containing min, max, and step values
+    /// @dev Returns a Cfg struct with min, max, and step values for the specified rate
     function cfgs(bytes32 id) external view returns (Cfg memory) {
         return _cfgs[id];
-    }
-
-    /// @notice Get current pending batch
-    /// @return batch The array of pending rate updates
-    /// @return eta The timestamp when the batch becomes executable
-    function batch() external view returns (ParamChange[] memory, uint256) {
-        return (_batch, eta);
     }
 }

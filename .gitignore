@@ -12,3 +12,8 @@ docs/
 
 # Dotenv file
 .env
+
+# Ignores script config
+/script/input/**/*.json
+!/script/input/**/template-*.json
+/script/output/**/*.json

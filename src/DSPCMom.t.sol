@@ -1,102 +1,161 @@
+// SPDX-FileCopyrightText: 2025 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.24;
 
-import {Test} from "forge-std/Test.sol";
-import {DSPCMom} from "./DSPCMom.sol";
-import {AuthorityMock} from "./mocks/AuthorityMock.sol";
+import "dss-test/DssTest.sol";
 import {DSPC} from "./DSPC.sol";
+import {DSPCMom} from "./DSPCMom.sol";
+import {ConvMock} from "./mocks/ConvMock.sol";
+import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
+import {DSPCInit} from "./deployment/DSPCInit.sol";
+import {DSPCInstance} from "./deployment/DSPCInstance.sol";
 
-contract DSPCMomTest is Test {
+interface ChiefLike {
+    function hat() external view returns (address);
+}
+
+interface ConvLike {
+    function turn(uint256 bps) external pure returns (uint256 ray);
+    function back(uint256 ray) external pure returns (uint256 bps);
+}
+
+interface SUSDSLike {
+    function ssr() external view returns (uint256);
+    function drip() external;
+}
+
+interface ProxyLike {
+    function exec(address usr, bytes memory fax) external returns (bytes memory out);
+}
+
+contract InitCaller {
+    function init(DssInstance memory dss, DSPCInstance memory inst) external {
+        DSPCInit.init(dss, inst);
+    }
+}
+
+contract DSPCMomIntegrationTest is DssTest {
+    address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
+
     // --- Events ---
     event SetOwner(address indexed owner);
     event SetAuthority(address indexed authority);
     event Halt(address indexed dspc);
 
+    DssInstance dss;
+    ChiefLike chief;
     DSPC dspc;
     DSPCMom mom;
-    AuthorityMock authority;
-    address admin = makeAddr("admin");
-    address alice = makeAddr("alice");
-    address bob = makeAddr("bob");
+    ConvLike conv;
+    SUSDSLike susds;
+    address pause;
+    ProxyLike pauseProxy;
+    InitCaller caller;
+
+    bytes32 constant ILK = "ETH-A";
+    bytes32 constant DSR = "DSR";
+    bytes32 constant SSR = "SSR";
 
     function setUp() public {
-        // Deploy DSPC with required dependencies
-        dspc = new DSPC(makeAddr("jug"), makeAddr("pot"), makeAddr("susds"), makeAddr("conv"));
+        vm.createSelectFork("mainnet");
+        dss = MCD.loadFromChainlog(CHAINLOG);
+        chief = ChiefLike(dss.chainlog.getAddress("MCD_ADM"));
+        pause = dss.chainlog.getAddress("MCD_PAUSE");
+        pauseProxy = ProxyLike(dss.chainlog.getAddress("MCD_PAUSE_PROXY"));
+        susds = SUSDSLike(dss.chainlog.getAddress("SUSDS"));
+        MCD.giveAdminAccess(dss);
 
-        // Deploy Mom and Authority
-        mom = new DSPCMom();
-        authority = new AuthorityMock();
+        caller = new InitCaller();
 
-        // Setup initial state
-        dspc.rely(address(mom)); // Mom needs authority over DSPC
-        dspc.deny(address(this)); // Remove deployer authority
+        conv = ConvLike(address(new ConvMock()));
 
-        // Transfer ownership to admin
-        vm.prank(address(this));
-        mom.setOwner(admin);
+        DSPCInstance memory inst = DSPCDeploy.deploy(
+            DSPCDeployParams({
+                deployer: address(this),
+                owner: address(pauseProxy),
+                jug: address(dss.jug),
+                pot: address(dss.pot),
+                susds: address(susds),
+                conv: address(conv)
+            })
+        );
+        dspc = inst.dspc;
+        mom = inst.mom;
+
+        // Simulate a spell casting
+        vm.prank(pause);
+        pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst)));
+
+        // The init script does not cover setting ilk specific parameters
+        vm.startPrank(address(pauseProxy));
+        {
+            dspc.file(ILK, "min", 1);
+            dspc.file(ILK, "max", 30000);
+            dspc.file(ILK, "step", 50);
+            dspc.file(DSR, "min", 1);
+            dspc.file(DSR, "max", 30000);
+            dspc.file(DSR, "step", 50);
+            dspc.file(SSR, "min", 1);
+            dspc.file(SSR, "max", 30000);
+            dspc.file(SSR, "step", 50);
+        }
+        vm.stopPrank();
     }
 
     function test_constructor() public view {
-        assertEq(mom.owner(), admin);
+        assertEq(mom.owner(), address(pauseProxy));
     }
 
     function test_setOwner() public {
-        vm.prank(admin);
-        mom.setOwner(alice);
-        assertEq(mom.owner(), alice);
+        vm.prank(address(pauseProxy));
+        mom.setOwner(address(0x1234));
+        assertEq(mom.owner(), address(0x1234));
+    }
+
+    function test_setOwner_unauthorized() public {
+        vm.expectRevert("DSPCMom/not-owner");
+        mom.setOwner(address(0x123));
     }
 
     function test_setAuthority() public {
-        vm.prank(admin);
-        mom.setAuthority(address(authority));
-        assertEq(address(mom.authority()), address(authority));
+        vm.prank(address(pauseProxy));
+        mom.setAuthority(address(0x123));
+        assertEq(address(mom.authority()), address(0x123));
     }
 
-    function test_halt_with_authority() public {
-        // Set up authority
-        vm.prank(admin);
-        mom.setAuthority(address(authority));
-
-        // Grant permission to bob through authority
-        vm.prank(authority.wards(address(this)) == 1 ? address(this) : admin);
-        authority.setCanCall(bob, address(mom), DSPCMom.halt.selector, true);
-
-        // Bob can now halt through authority
-        assertEq(dspc.bad(), 0);
-        vm.prank(bob);
-        mom.halt(address(dspc));
-        assertEq(dspc.bad(), 1);
+    function test_setAuthority_unauthorized() public {
+        vm.expectRevert("DSPCMom/not-owner");
+        mom.setAuthority(address(0x123));
     }
 
-    function test_halt_as_owner() public {
-        assertEq(dspc.bad(), 0);
-
-        vm.prank(admin);
-        mom.halt(address(dspc));
-
-        assertEq(dspc.bad(), 1);
-    }
-
-    function test_RevertWhen_NotAuthorized() public {
-        vm.prank(bob);
+    function test_halt_unauthorized() public {
         vm.expectRevert("DSPCMom/not-authorized");
         mom.halt(address(dspc));
     }
 
-    function test_RevertWhen_AuthorityNotEnabled() public {
-        // Set up authority but don't grant permission
-        vm.prank(admin);
-        mom.setAuthority(address(authority));
-
-        // Should fail since bob doesn't have permission
-        vm.prank(bob);
-        vm.expectRevert("DSPCMom/not-authorized");
+    function test_halt_owner() public {
+        vm.prank(address(pauseProxy));
         mom.halt(address(dspc));
+        assertEq(dspc.bad(), 1);
     }
 
-    function test_RevertWhen_ZeroAddress() public {
-        vm.prank(admin);
-        vm.expectRevert();
-        mom.halt(address(0));
+    function test_halt_hat() public {
+        vm.prank(chief.hat());
+        mom.halt(address(dspc));
+        assertEq(dspc.bad(), 1);
     }
 }

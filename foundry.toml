@@ -12,5 +12,13 @@ verbosity = 3
 [profile.test]
 verbosity = 3
 
+fs_permissions = [
+    { access = "read", path = "./out/" },
+    { access = "read", path = "./script/input/" },
+    { access = "read-write", path = "./script/output/" }
+]
+
 [rpc_endpoints]
 mainnet = "${ETH_RPC_URL}"
+
+no_match_coverage = "test"
