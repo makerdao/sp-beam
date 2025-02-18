@@ -51,7 +51,6 @@ contract DSPC {
     struct Cfg {
         uint16 min; // Minimum rate in basis points
         uint16 max; // Maximum rate in basis points
-        uint16 step; // Maximum rate change in basis points
     }
 
     struct ParamChange {
@@ -200,7 +199,7 @@ contract DSPC {
 
     /// @notice Configure constraints for a rate
     /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @param what The parameter to configure ("min", "max", or "step")
+    /// @param what The parameter to configure ("min", "max")
     /// @param data The value to set (must be greater than 0)
     /// @dev Emits File event after successful configuration
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
@@ -210,9 +209,6 @@ contract DSPC {
         } else if (what == "max") {
             require(data > 0, "DSPC/invalid-max");
             _cfgs[id].max = uint16(data);
-        } else if (what == "step") {
-            require(data > 0, "DSPC/invalid-step");
-            _cfgs[id].step = uint16(data);
         } else {
             revert("DSPC/file-unrecognized-param");
         }
@@ -228,7 +224,6 @@ contract DSPC {
     ///      - Empty updates array
     ///      - Rate below configured minimum
     ///      - Rate above configured maximum
-    ///      - Rate change exceeds configured step size
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
 
@@ -240,20 +235,6 @@ contract DSPC {
 
             require(bps >= cfg.min, "DSPC/below-min");
             require(bps <= cfg.max, "DSPC/above-max");
-
-            // Check rate change is within allowed gap
-            uint256 oldBps;
-            if (id == "DSR") {
-                oldBps = conv.rtob(PotLike(pot).dsr());
-            } else if (id == "SSR") {
-                oldBps = conv.rtob(SUSDSLike(susds).ssr());
-            } else {
-                (uint256 duty,) = JugLike(jug).ilks(id);
-                oldBps = conv.rtob(duty);
-            }
-
-            uint256 delta = _absDiff(bps, oldBps);
-            require(delta <= cfg.step, "DSPC/delta-above-step");
 
             // Execute the update
             uint256 ray = conv.btor(bps);
@@ -283,8 +264,8 @@ contract DSPC {
     // --- Getters ---
     /// @notice Get configuration for a rate
     /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @return The configuration struct containing min, max, and step values
-    /// @dev Returns a Cfg struct with min, max, and step values for the specified rate
+    /// @return The configuration struct containing min and max values
+    /// @dev Returns a Cfg struct with min and max values for the specified rate
     function cfgs(bytes32 id) external view returns (Cfg memory) {
         return _cfgs[id];
     }

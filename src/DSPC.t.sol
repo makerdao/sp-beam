@@ -99,13 +99,10 @@ contract DSPCTest is DssTest {
         {
             dspc.file(ILK, "min", 1);
             dspc.file(ILK, "max", 30000);
-            dspc.file(ILK, "step", 50);
             dspc.file(DSR, "min", 1);
             dspc.file(DSR, "max", 30000);
-            dspc.file(DSR, "step", 50);
             dspc.file(SSR, "min", 1);
             dspc.file(SSR, "max", 30000);
-            dspc.file(SSR, "step", 50);
             dspc.kiss(bud);
         }
         vm.stopPrank();
@@ -150,17 +147,14 @@ contract DSPCTest is DssTest {
     function test_file_ilk() public {
         assertEq(dspc.cfgs(ILK).min, 1);
         assertEq(dspc.cfgs(ILK).max, 30000);
-        assertEq(dspc.cfgs(ILK).step, 50);
 
         vm.startPrank(address(pauseProxy));
         dspc.file(ILK, "min", 100);
         dspc.file(ILK, "max", 3000);
-        dspc.file(ILK, "step", 100);
         vm.stopPrank();
 
         assertEq(dspc.cfgs(ILK).min, 100);
         assertEq(dspc.cfgs(ILK).max, 3000);
-        assertEq(dspc.cfgs(ILK).step, 100);
     }
 
     function test_file_ilk_invalid() public {
@@ -168,9 +162,6 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/invalid-max");
         dspc.file(ILK, "max", 0);
-
-        vm.expectRevert("DSPC/invalid-step");
-        dspc.file(ILK, "step", 0);
 
         vm.expectRevert("DSPC/file-unrecognized-param");
         dspc.file(ILK, "unknown", 100);
@@ -276,18 +267,6 @@ contract DSPCTest is DssTest {
         updates[0] = DSPC.ParamChange(ILK, 150);
 
         vm.expectRevert("DSPC/above-max");
-        vm.prank(bud);
-        dspc.set(updates);
-    }
-
-    function test_set_above_step() public {
-        vm.prank(address(pauseProxy));
-        dspc.file(ILK, "step", 50);
-
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 100);
-
-        vm.expectRevert("DSPC/delta-above-step");
         vm.prank(bud);
         dspc.set(updates);
     }
