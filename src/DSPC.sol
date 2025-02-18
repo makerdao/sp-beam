@@ -117,7 +117,7 @@ contract DSPC {
      * @notice A batch of rate changes was executed.
      * @param updates Array of rate updates.
      */
-    event Put(ParamChange[] updates);
+    event Set(ParamChange[] updates);
 
     // --- Modifiers ---
     modifier auth() {
