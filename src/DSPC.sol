@@ -228,7 +228,7 @@ contract DSPC {
     ///      - Rate below configured minimum
     ///      - Rate above configured maximum
     ///      - Rate change exceeds configured step size
-    function put(ParamChange[] calldata updates) external toll good {
+    function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
 
         // Validate all updates in the batch
