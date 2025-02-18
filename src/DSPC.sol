@@ -222,7 +222,7 @@ contract DSPC {
     /// @notice Apply rate updates
     /// @param updates Array of rate updates to apply
     /// @dev Each update is validated against configured constraints before being applied
-    /// @dev Emits Put event after all updates are successfully applied
+    /// @dev Emits Set event after all updates are successfully applied
     /// @dev Reverts if:
     ///      - Empty updates array
     ///      - Rate below configured minimum
