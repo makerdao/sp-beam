@@ -113,10 +113,11 @@ contract DSPC {
      */
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
     /**
-     * @notice A batch of rate changes was executed.
-     * @param updates Array of rate updates.
+     * @notice Rate change was executed.
+     * @param id The Ilk/DSR/SSR identifier.
+     * @param bps The new value of the rate in basis points.
      */
-    event Set(ParamChange[] updates);
+    event Set(bytes32 indexed id, uint256 bps);
 
     // --- Modifiers ---
     modifier auth() {
@@ -248,9 +249,8 @@ contract DSPC {
                 jug.drip(id);
                 jug.file(id, "duty", ray);
             }
+            emit Set(id, bps);
         }
-
-        emit Set(updates);
     }
 
     /// @notice Calculates absolute difference between two uint256 values
