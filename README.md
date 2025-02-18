@@ -71,7 +71,7 @@ dspc.kiss(facilitatorAddress);
 DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
 updates[0] = DSPC.ParamChange("ETH-A", 150);  // Set ETH-A rate to 1.5%
 updates[1] = DSPC.ParamChange("DSR", 75);     // Set DSR to 0.75%
-dspc.put(updates);
+dspc.set(updates);
 ```
 
 ## Security

@@ -63,7 +63,7 @@ contract DSPCTest is DssTest {
     event Kiss(address indexed usr);
     event Diss(address indexed usr);
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
-    event Put(DSPC.ParamChange[] updates);
+    event Set(DSPC.ParamChange[] updates);
 
     function setUp() public {
         vm.createSelectFork("mainnet");
@@ -178,7 +178,7 @@ contract DSPCTest is DssTest {
         vm.stopPrank();
     }
 
-    function test_put_ilk() public {
+    function test_set_ilk() public {
         (uint256 duty,) = dss.jug.ilks(ILK);
         uint256 target = conv.rtob(duty) + 50;
 
@@ -186,25 +186,25 @@ contract DSPCTest is DssTest {
         updates[0] = DSPC.ParamChange(ILK, target);
 
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
 
         (duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(target));
     }
 
-    function test_put_dsr() public {
+    function test_set_dsr() public {
         uint256 target = conv.rtob(dss.pot.dsr()) + 50;
 
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
         updates[0] = DSPC.ParamChange(DSR, target);
 
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
 
         assertEq(dss.pot.dsr(), conv.btor(target));
     }
 
-    function test_put_ssr() public {
+    function test_set_ssr() public {
         vm.prank(bud);
         uint256 target = conv.rtob(susds.ssr()) - 50;
 
@@ -212,12 +212,12 @@ contract DSPCTest is DssTest {
         updates[0] = DSPC.ParamChange(SSR, target);
 
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
 
         assertEq(susds.ssr(), conv.btor(target));
     }
 
-    function test_put_multiple() public {
+    function test_set_multiple() public {
         (uint256 duty,) = dss.jug.ilks(ILK);
         uint256 ilkTarget = conv.rtob(duty) - 50;
         uint256 dsrTarget = conv.rtob(dss.pot.dsr()) - 50;
@@ -229,7 +229,7 @@ contract DSPCTest is DssTest {
         updates[2] = DSPC.ParamChange(SSR, ssrTarget);
 
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
 
         (duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(ilkTarget));
@@ -237,23 +237,23 @@ contract DSPCTest is DssTest {
         assertEq(susds.ssr(), conv.btor(ssrTarget));
     }
 
-    function test_put_empty() public {
+    function test_set_empty() public {
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](0);
 
         vm.expectRevert("DSPC/empty-batch");
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
     }
 
-    function test_put_unauthorized() public {
+    function test_set_unauthorized() public {
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
         updates[0] = DSPC.ParamChange(ILK, 100);
 
         vm.expectRevert("DSPC/not-facilitator");
-        dspc.put(updates);
+        dspc.set(updates);
     }
 
-    function test_put_below_min() public {
+    function test_set_below_min() public {
         vm.prank(address(pauseProxy));
         dspc.file(ILK, "min", 100);
 
@@ -262,10 +262,10 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/below-min");
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
     }
 
-    function test_put_above_max() public {
+    function test_set_above_max() public {
         vm.prank(address(pauseProxy));
         dspc.file(ILK, "max", 100);
 
@@ -274,10 +274,10 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/above-max");
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
     }
 
-    function test_put_above_step() public {
+    function test_set_above_step() public {
         vm.prank(address(pauseProxy));
         dspc.file(ILK, "step", 50);
 
@@ -286,6 +286,6 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/delta-above-step");
         vm.prank(bud);
-        dspc.put(updates);
+        dspc.set(updates);
     }
 }
