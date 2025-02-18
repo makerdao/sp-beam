@@ -91,12 +91,12 @@ contract DSPC {
      */
     event Deny(address indexed usr);
     /**
-     * @notice `usr` was granted permission to change rates (call put()).
+     * @notice `usr` was granted permission to change rates (call set()).
      * @param usr The user address.
      */
     event Kiss(address indexed usr);
     /**
-     * @notice Permission revoked for `usr` to change rates (call put()).
+     * @notice Permission revoked for `usr` to change rates (call set()).
      * @param usr The user address.
      */
     event Diss(address indexed usr);
@@ -204,6 +204,7 @@ contract DSPC {
     /// @param data The value to set (must be greater than 0)
     /// @dev Emits File event after successful configuration
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
+        require(data <= type(uint16).max, "DSPC/invalid-value");
         if (what == "min") {
             _cfgs[id].min = uint16(data);
         } else if (what == "max") {

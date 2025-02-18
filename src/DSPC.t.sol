@@ -142,7 +142,7 @@ contract DSPCTest is DssTest {
         dspc.file("bad", 2);
 
         vm.expectRevert("DSPC/file-unrecognized-param");
-        dspc.file("unknown", 1);
+        dspc.file("unknown", 1);     
 
         vm.stopPrank();
     }
@@ -174,6 +174,9 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/file-unrecognized-param");
         dspc.file(ILK, "unknown", 100);
+
+        vm.expectRevert("DSPC/invalid-value");
+        dspc.file(ILK, "max", uint256(type(uint16).max) + 1);           
 
         vm.stopPrank();
     }
