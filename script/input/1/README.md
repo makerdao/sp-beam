@@ -21,5 +21,4 @@ FOUNDRY_SCRIPT_CONFIG=dspc-deploy forge script script/DSPCDeploy.s.sol:DSPCDeplo
 The deployment script will:
 1. Load system addresses from chainlog (jug, pot, susds)
 2. Deploy DSPC and DSPCMom contracts
-3. Set up permissions (mom owned by pause proxy, mom has authority over DSPC)
 4. Export addresses to `/script/output/1/dspc-deploy.json`
