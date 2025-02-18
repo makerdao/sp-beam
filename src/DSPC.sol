@@ -268,7 +268,7 @@ contract DSPC {
             }
         }
 
-        emit Put(updates);
+        emit Set(updates);
     }
 
     /// @notice Calculates absolute difference between two uint256 values
