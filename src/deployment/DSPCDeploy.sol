@@ -36,7 +36,7 @@ library DSPCDeploy {
 
         inst.mom = address(new DSPCMom());
 
-        ScriptTools.switchOwner(address(inst.dspc), params.deployer, params.owner);
+        ScriptTools.switchOwner(inst.dspc, params.deployer, params.owner);
         MomLike(inst.mom).setOwner(params.owner);
     }
 }
