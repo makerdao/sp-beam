@@ -32,9 +32,9 @@ struct DSPCDeployParams {
 
 library DSPCDeploy {
     function deploy(DSPCDeployParams memory params) internal returns (DSPCInstance memory inst) {
-        inst.dspc = new DSPC(params.jug, params.pot, params.susds, params.conv);
+        inst.dspc = address(new DSPC(params.jug, params.pot, params.susds, params.conv));
 
-        inst.mom = new DSPCMom();
+        inst.mom = address(new DSPCMom());
 
         ScriptTools.switchOwner(address(inst.dspc), params.deployer, params.owner);
         inst.mom.setOwner(params.owner);
