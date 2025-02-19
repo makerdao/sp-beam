@@ -18,7 +18,7 @@ pragma solidity ^0.8.24;
 import {DssInstance} from "dss-test/MCD.sol";
 import {DSPCInstance} from "./DSPCInstance.sol";
 
-interface SUSDSLike {
+interface RelyLike {
     function rely(address usr) external;
 }
 
