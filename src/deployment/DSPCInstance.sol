@@ -20,6 +20,6 @@ import {DSPC} from "../DSPC.sol";
 import {DSPCMom} from "../DSPCMom.sol";
 
 struct DSPCInstance {
-    DSPC dspc;
-    DSPCMom mom;
+    address dspc;
+    address mom;
 }
