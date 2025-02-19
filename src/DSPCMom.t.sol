@@ -93,8 +93,8 @@ contract DSPCMomIntegrationTest is DssTest {
                 conv: address(conv)
             })
         );
-        dspc = inst.dspc;
-        mom = inst.mom;
+        dspc = DSPC(inst.dspc);
+        mom = DSPCMom(inst.mom);
 
         // Simulate a spell casting
         vm.prank(pause);

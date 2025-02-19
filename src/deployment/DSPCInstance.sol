@@ -16,9 +16,6 @@
 
 pragma solidity ^0.8.24;
 
-import {DSPC} from "../DSPC.sol";
-import {DSPCMom} from "../DSPCMom.sol";
-
 struct DSPCInstance {
     address dspc;
     address mom;

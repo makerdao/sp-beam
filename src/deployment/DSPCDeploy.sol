@@ -21,6 +21,10 @@ import {DSPC} from "../DSPC.sol";
 import {DSPCMom} from "../DSPCMom.sol";
 import {DSPCInstance} from "./DSPCInstance.sol";
 
+interface MomLike {
+    function setOwner(address owner) external;
+}
+
 struct DSPCDeployParams {
     address deployer;
     address owner;
