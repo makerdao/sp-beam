@@ -34,6 +34,6 @@ library DSPCInit {
 
         dss.jug.rely(address(inst.dspc));
         dss.pot.rely(address(inst.dspc));
-        SUSDSLike(dss.chainlog.getAddress("SUSDS")).rely(address(inst.dspc));
+        RelyLike(dss.chainlog.getAddress("SUSDS")).rely(address(inst.dspc));
     }
 }
