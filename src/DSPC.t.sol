@@ -97,12 +97,12 @@ contract DSPCTest is DssTest {
         // The init script does not cover setting ilk specific parameters
         vm.startPrank(address(pauseProxy));
         {
-            dspc.file(ILK, "min", 1);
             dspc.file(ILK, "max", 30000);
-            dspc.file(DSR, "min", 1);
+            dspc.file(ILK, "min", 1);
             dspc.file(DSR, "max", 30000);
-            dspc.file(SSR, "min", 1);
+            dspc.file(DSR, "min", 1);
             dspc.file(SSR, "max", 30000);
+            dspc.file(SSR, "min", 1);
             dspc.kiss(bud);
         }
         vm.stopPrank();
@@ -159,9 +159,13 @@ contract DSPCTest is DssTest {
 
     function test_file_ilk_invalid() public {
         vm.startPrank(address(pauseProxy));
+        DSPC.Cfg memory cfg = dspc.cfgs(ILK);
 
-        vm.expectRevert("DSPC/invalid-max");
-        dspc.file(ILK, "max", 0);
+        vm.expectRevert("DSPC/min-too-high");
+        dspc.file(ILK, "min", cfg.max + 1);
+
+        vm.expectRevert("DSPC/max-too-low");
+        dspc.file(ILK, "max", cfg.min - 1);
 
         vm.expectRevert("DSPC/file-unrecognized-param");
         dspc.file(ILK, "unknown", 100);

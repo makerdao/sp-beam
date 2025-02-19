@@ -103,12 +103,12 @@ contract DSPCMomIntegrationTest is DssTest {
         // The init script does not cover setting ilk specific parameters
         vm.startPrank(address(pauseProxy));
         {
-            dspc.file(ILK, "min", 1);
             dspc.file(ILK, "max", 30000);
-            dspc.file(DSR, "min", 1);
+            dspc.file(ILK, "min", 1);
             dspc.file(DSR, "max", 30000);
-            dspc.file(SSR, "min", 1);
+            dspc.file(DSR, "min", 1);
             dspc.file(SSR, "max", 30000);
+            dspc.file(SSR, "min", 1);
         }
         vm.stopPrank();
     }

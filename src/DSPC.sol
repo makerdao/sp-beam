@@ -206,9 +206,10 @@ contract DSPC {
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
         require(data <= type(uint16).max, "DSPC/invalid-value");
         if (what == "min") {
+            require(data <= _cfgs[id].max, "DSPC/min-too-high");
             _cfgs[id].min = uint16(data);
         } else if (what == "max") {
-            require(data > 0, "DSPC/invalid-max");
+            require(data >= _cfgs[id].min, "DSPC/max-too-low");
             _cfgs[id].max = uint16(data);
         } else {
             revert("DSPC/file-unrecognized-param");
