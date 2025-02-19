@@ -29,8 +29,8 @@ library DSPCInit {
      * @param inst The DSCP instance.
      */
     function init(DssInstance memory dss, DSPCInstance memory inst) internal {
-        inst.dspc.rely(address(inst.mom));
-        inst.mom.setAuthority(dss.chainlog.getAddress("MCD_ADM"));
+        RelyLike(inst.dspc).rely(address(inst.mom));
+        MomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
 
         dss.jug.rely(address(inst.dspc));
         dss.pot.rely(address(inst.dspc));
