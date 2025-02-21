@@ -22,7 +22,7 @@ interface MomLike {
     function setAuthority(address authority) external;
 }
 
-interface RelayLike {
+interface RelyLike {
     function rely(address usr) external;
 }
 
@@ -33,11 +33,11 @@ library DSPCInit {
      * @param inst The DSCP instance.
      */
     function init(DssInstance memory dss, DSPCInstance memory inst) internal {
-        RelayLike(inst.dspc).rely(address(inst.mom));
+        RelyLike(inst.dspc).rely(address(inst.mom));
         MomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
 
         dss.jug.rely(address(inst.dspc));
         dss.pot.rely(address(inst.dspc));
-        RelayLike(dss.chainlog.getAddress("SUSDS")).rely(address(inst.dspc));
+        RelyLike(dss.chainlog.getAddress("SUSDS")).rely(address(inst.dspc));
     }
 }
