@@ -36,7 +36,6 @@ interface SUSDSLike {
 
 interface ConvLike {
     function btor(uint256 bps) external pure returns (uint256 ray);
-    function rtob(uint256 ray) external pure returns (uint256 bps);
 }
 
 /// @title Direct Stability Parameters Change Module
