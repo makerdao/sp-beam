@@ -99,18 +99,6 @@ contract DSPCMomIntegrationTest is DssTest {
         // Simulate a spell casting
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst)));
-
-        // The init script does not cover setting ilk specific parameters
-        vm.startPrank(address(pauseProxy));
-        {
-            dspc.file(ILK, "max", 30000);
-            dspc.file(ILK, "min", 1);
-            dspc.file(DSR, "max", 30000);
-            dspc.file(DSR, "min", 1);
-            dspc.file(SSR, "max", 30000);
-            dspc.file(SSR, "min", 1);
-        }
-        vm.stopPrank();
     }
 
     function test_constructor() public view {
