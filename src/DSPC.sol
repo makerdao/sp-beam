@@ -263,7 +263,7 @@ contract DSPC {
             }
 
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
-            require(delta <= cfg.step, "DSPC/delta-above-step");            
+            require(delta <= cfg.step, "DSPC/delta-above-step");
 
             // Execute the update
             uint256 ray = conv.btor(bps);
