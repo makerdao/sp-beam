@@ -239,7 +239,7 @@ contract DSPC {
     ///      - Rate change above configured step
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
-        require(block.timestamp >= tau + toc, "DSPC/cooldown-not-expired");
+        require(block.timestamp >= tau + toc, "DSPC/too-early");
         toc = block.timestamp;
 
         // Validate all updates in the batch
@@ -262,6 +262,7 @@ contract DSPC {
                 oldBps = conv.rtob(duty);
             }
 
+            // Calculates absolute difference between the old and the new rate
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
             require(delta <= cfg.step, "DSPC/delta-above-step");
 
@@ -281,13 +282,6 @@ contract DSPC {
         }
     }
 
-    /// @notice Calculates absolute difference between two uint256 values
-    /// @param a The first uint256 value
-    /// @param b The second uint256 value
-    /// @return delta The absolute difference between the parameters
-    function _absDiff(uint256 a, uint256 b) internal pure returns (uint256 delta) {
-        delta = a > b ? a - b : b - a;
-    }
 
     // --- Getters ---
     /// @notice Get configuration for a rate

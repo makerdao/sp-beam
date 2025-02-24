@@ -17,6 +17,7 @@ The DSPC module provides a streamlined way to modify stability parameters in the
   - Facilitators can propose and execute rate changes
 - Rate change constraints:
   - Min/max caps per rate
+  - Max update delta
 - Event emission for all actions
 - Simple, auditable implementation
 
@@ -47,7 +48,7 @@ DSPC dspc = new DSPC(
 2. Configure the module parameters:
 ```solidity
 // Set timelock duration
-dspc.file("lag", 1 days);
+dspc.file("tau", 1 days);
 
 // Configure constraints for a collateral type
 dspc.file("ETH-A", "min", 1);     // Min rate: 0.01%
