@@ -282,7 +282,6 @@ contract DSPC {
         }
     }
 
-
     // --- Getters ---
     /// @notice Get configuration for a rate
     /// @param id The rate identifier (ilk name, "DSR", or "SSR")
