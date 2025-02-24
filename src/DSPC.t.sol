@@ -99,10 +99,13 @@ contract DSPCTest is DssTest {
         {
             dspc.file(ILK, "max", 30000);
             dspc.file(ILK, "min", 1);
+            dspc.file(ILK, "step", 100);
             dspc.file(DSR, "max", 30000);
             dspc.file(DSR, "min", 1);
+            dspc.file(DSR, "step", 100);
             dspc.file(SSR, "max", 30000);
             dspc.file(SSR, "min", 1);
+            dspc.file(SSR, "step", 100);
             dspc.kiss(bud);
         }
         vm.stopPrank();
@@ -128,7 +131,7 @@ contract DSPCTest is DssTest {
         checkAuth(address(dspc), "DSPC");
     }
 
-    function test_file_bad() public {
+    function test_file() public {
         vm.startPrank(address(pauseProxy));
 
         assertEq(dspc.bad(), 0);
@@ -141,20 +144,27 @@ contract DSPCTest is DssTest {
         vm.expectRevert("DSPC/file-unrecognized-param");
         dspc.file("unknown", 1);
 
+        assertEq(dspc.tau(), 0);
+        dspc.file("tau", 1 days);
+        assertEq(dspc.tau(), 1 days);
+
         vm.stopPrank();
     }
 
     function test_file_ilk() public {
         assertEq(dspc.cfgs(ILK).min, 1);
         assertEq(dspc.cfgs(ILK).max, 30000);
+        assertEq(dspc.cfgs(ILK).step, 100);
 
         vm.startPrank(address(pauseProxy));
         dspc.file(ILK, "min", 100);
         dspc.file(ILK, "max", 3000);
+        dspc.file(ILK, "step", 420);
         vm.stopPrank();
 
         assertEq(dspc.cfgs(ILK).min, 100);
         assertEq(dspc.cfgs(ILK).max, 3000);
+        assertEq(dspc.cfgs(ILK).step, 420);
     }
 
     function test_file_ilk_invalid() public {
@@ -272,6 +282,36 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/above-max");
         vm.prank(bud);
+        dspc.set(updates);
+    }
+
+    function test_set_delta_above_step() public {
+        vm.prank(address(pauseProxy));
+        dspc.file(ILK, "step", 100);
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(ILK, 100);
+
+        vm.expectRevert("DSPC/delta-above-step");
+        vm.prank(bud);
+        dspc.set(updates);
+    }
+
+    function test_set_before_cooldown() public {
+        vm.prank(address(pauseProxy));
+        dspc.file("tau", 100);
+        uint256 currentDSR = conv.rtob(dss.pot.dsr());
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 1);
+        vm.prank(bud);
+        dspc.set(updates);
+
+        vm.warp(block.timestamp + 99);
+
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 2);
+        vm.prank(bud);
+        vm.expectRevert("DSPC/cooldown-not-expired");
         dspc.set(updates);
     }
 }

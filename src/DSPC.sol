@@ -36,6 +36,7 @@ interface SUSDSLike {
 
 interface ConvLike {
     function btor(uint256 bps) external pure returns (uint256 ray);
+    function rtob(uint256 ray) external pure returns (uint256 bps);
 }
 
 /// @title Direct Stability Parameters Change Module
@@ -50,6 +51,7 @@ contract DSPC {
     struct Cfg {
         uint16 min; // Minimum rate in basis points
         uint16 max; // Maximum rate in basis points
+        uint16 step; // Maximum rate change in basis points
     }
 
     struct ParamChange {
@@ -76,6 +78,10 @@ contract DSPC {
     mapping(bytes32 => Cfg) private _cfgs;
     /// @notice Circuit breaker flag
     uint256 public bad;
+    /// @notice Cooldown period between rate changes in seconds
+    uint256 public tau;
+    /// @notice Last time when rates were updated (Unix timestamp)
+    uint256 public toc;
 
     // --- Events ---
     /**
@@ -183,13 +189,15 @@ contract DSPC {
     }
 
     /// @notice Configure module parameters
-    /// @param what The parameter to configure (only "bad" is supported)
-    /// @param data The value to set (must be 0 or 1 for "bad")
+    /// @param what The parameter to configure
+    /// @param data The value to set
     /// @dev Emits File event after successful configuration
     function file(bytes32 what, uint256 data) external auth {
         if (what == "bad") {
             require(data <= 1, "DSPC/invalid-bad-value");
             bad = data;
+        } else if (what == "tau") {
+            tau = data;
         } else {
             revert("DSPC/file-unrecognized-param");
         }
@@ -199,8 +207,8 @@ contract DSPC {
 
     /// @notice Configure constraints for a rate
     /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @param what The parameter to configure ("min", "max")
-    /// @param data The value to set (must be greater than 0)
+    /// @param what The parameter to configure ("min", "max" or "step")
+    /// @param data The value to set
     /// @dev Emits File event after successful configuration
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
         require(data <= type(uint16).max, "DSPC/invalid-value");
@@ -210,6 +218,8 @@ contract DSPC {
         } else if (what == "max") {
             require(data >= _cfgs[id].min, "DSPC/max-too-low");
             _cfgs[id].max = uint16(data);
+        } else if (what == "step") {
+            _cfgs[id].step = uint16(data);
         } else {
             revert("DSPC/file-unrecognized-param");
         }
@@ -223,10 +233,14 @@ contract DSPC {
     /// @dev Emits Set event after all updates are successfully applied
     /// @dev Reverts if:
     ///      - Empty updates array
+    ///      - Cooldown not expired
     ///      - Rate below configured minimum
     ///      - Rate above configured maximum
+    ///      - Rate change above configured step
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
+        require(block.timestamp >= tau + toc, "DSPC/cooldown-not-expired");
+        toc = block.timestamp;
 
         // Validate all updates in the batch
         for (uint256 i = 0; i < updates.length; i++) {
@@ -236,6 +250,20 @@ contract DSPC {
 
             require(bps >= cfg.min, "DSPC/below-min");
             require(bps <= cfg.max, "DSPC/above-max");
+
+            // Check rate change is within allowed gap
+            uint256 oldBps;
+            if (id == "DSR") {
+                oldBps = conv.rtob(PotLike(pot).dsr());
+            } else if (id == "SSR") {
+                oldBps = conv.rtob(SUSDSLike(susds).ssr());
+            } else {
+                (uint256 duty,) = JugLike(jug).ilks(id);
+                oldBps = conv.rtob(duty);
+            }
+
+            uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
+            require(delta <= cfg.step, "DSPC/delta-above-step");            
 
             // Execute the update
             uint256 ray = conv.btor(bps);
