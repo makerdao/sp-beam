@@ -311,7 +311,7 @@ contract DSPCTest is DssTest {
 
         updates[0] = DSPC.ParamChange(DSR, currentDSR + 2);
         vm.prank(bud);
-        vm.expectRevert("DSPC/cooldown-not-expired");
+        vm.expectRevert("DSPC/too-early");
         dspc.set(updates);
     }
 }
