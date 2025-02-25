@@ -303,15 +303,65 @@ contract DSPCTest is DssTest {
         uint256 currentDSR = conv.rtob(dss.pot.dsr());
 
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(DSR, currentDSR + 1);
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 50);
         vm.prank(bud);
         dspc.set(updates);
 
-        vm.warp(block.timestamp + 99);
-
-        updates[0] = DSPC.ParamChange(DSR, currentDSR + 2);
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 150);
         vm.prank(bud);
-        vm.expectRevert("DSPC/too-early");
+        vm.expectRevert("DSPC/delta-above-step");
+        dspc.set(updates);
+
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 80);
+        vm.prank(bud);
+        dspc.set(updates);
+    }
+
+    function test_pin_updates_after_cooldown() public {
+        vm.prank(address(pauseProxy));
+        dspc.file("tau", 100);
+        uint256 currentDSR = conv.rtob(dss.pot.dsr());
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 50);
+        vm.prank(bud);
+        dspc.set(updates);
+
+        vm.warp(block.timestamp + 101);
+
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 150);
+        vm.prank(bud);
+        dspc.set(updates);
+
+        DSPC.Cfg memory cfg = dspc.cfgs(DSR);
+        assertEq(cfg.pin, currentDSR + 50);
+        assertEq(cfg.toc, block.timestamp);
+    }
+
+    function test_multiple_changes_within_step() public {
+        vm.startPrank(address(pauseProxy));
+        dspc.file("tau", 100);
+        dspc.file(DSR, "step", 50);
+        vm.stopPrank();
+
+        uint256 currentDSR = conv.rtob(dss.pot.dsr());
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 20);
+        vm.prank(bud);
+        dspc.set(updates);
+
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 40);
+        vm.prank(bud);
+        dspc.set(updates);
+
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 10);
+        vm.prank(bud);
+        dspc.set(updates);
+
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 51);
+        vm.prank(bud);
+        vm.expectRevert("DSPC/delta-above-step");
         dspc.set(updates);
     }
 }

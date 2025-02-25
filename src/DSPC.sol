@@ -52,6 +52,8 @@ contract DSPC {
         uint16 min; // Minimum rate in basis points
         uint16 max; // Maximum rate in basis points
         uint16 step; // Maximum rate change in basis points
+        uint16 pin; // Anchor value for the rate change
+        uint64 toc; // Time of the last pin update
     }
 
     struct ParamChange {
@@ -80,8 +82,6 @@ contract DSPC {
     uint256 public bad;
     /// @notice Cooldown period between rate changes in seconds
     uint256 public tau;
-    /// @notice Last time when rates were updated (Unix timestamp)
-    uint256 public toc;
 
     // --- Events ---
     /**
@@ -239,34 +239,20 @@ contract DSPC {
     ///      - Rate change above configured step
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
-        require(block.timestamp >= tau + toc, "DSPC/too-early");
-        toc = block.timestamp;
 
-        // Validate all updates in the batch
         for (uint256 i = 0; i < updates.length; i++) {
             bytes32 id = updates[i].id;
             uint256 bps = updates[i].bps;
+
+            if (block.timestamp >= tau + _cfgs[id].toc) _sync(id);
             Cfg memory cfg = _cfgs[id];
 
             require(bps >= cfg.min, "DSPC/below-min");
             require(bps <= cfg.max, "DSPC/above-max");
 
-            // Check rate change is within allowed gap
-            uint256 oldBps;
-            if (id == "DSR") {
-                oldBps = conv.rtob(PotLike(pot).dsr());
-            } else if (id == "SSR") {
-                oldBps = conv.rtob(SUSDSLike(susds).ssr());
-            } else {
-                (uint256 duty,) = JugLike(jug).ilks(id);
-                oldBps = conv.rtob(duty);
-            }
-
-            // Calculates absolute difference between the old and the new rate
-            uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
+            uint256 delta = bps > cfg.pin ? bps - cfg.pin : cfg.pin - bps;
             require(delta <= cfg.step, "DSPC/delta-above-step");
 
-            // Execute the update
             uint256 ray = conv.btor(bps);
             if (id == "DSR") {
                 pot.drip();
@@ -280,6 +266,20 @@ contract DSPC {
             }
             emit Set(id, bps);
         }
+    }
+
+    function _sync(bytes32 id) internal {
+        uint256 currentBps;
+        if (id == "DSR") {
+            currentBps = conv.rtob(PotLike(pot).dsr());
+        } else if (id == "SSR") {
+            currentBps = conv.rtob(SUSDSLike(susds).ssr());
+        } else {
+            (uint256 duty,) = JugLike(jug).ilks(id);
+            currentBps = conv.rtob(duty);
+        }
+        _cfgs[id].pin = uint16(currentBps);
+        _cfgs[id].toc = uint64(block.timestamp);
     }
 
     // --- Getters ---
