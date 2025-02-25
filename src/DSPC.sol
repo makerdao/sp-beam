@@ -51,8 +51,8 @@ contract DSPC {
     struct Cfg {
         uint16 min; // Minimum rate in basis points
         uint16 max; // Maximum rate in basis points
-        uint16 step; // Maximum rate change in basis points
         uint16 pin; // Anchor value for the rate change
+        uint16 step; // Maximum rate change in basis points
         uint64 toc; // Time of the last pin update
     }
 
@@ -244,7 +244,7 @@ contract DSPC {
             bytes32 id = updates[i].id;
             uint256 bps = updates[i].bps;
 
-            if (block.timestamp >= tau + _cfgs[id].toc) _sync(id);
+            if (block.timestamp >= _cfgs[id].toc + tau) _sync(id);
             Cfg memory cfg = _cfgs[id];
 
             require(bps >= cfg.min, "DSPC/below-min");
