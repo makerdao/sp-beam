@@ -63,7 +63,7 @@ contract DSPCTest is DssTest {
     event Kiss(address indexed usr);
     event Diss(address indexed usr);
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
-    event Set(DSPC.ParamChange[] updates);
+    event Set(bytes32 indexed id, uint256 value);
     event Sync(bytes32 indexed id, uint256 pin);
 
     function setUp() public {
@@ -378,5 +378,55 @@ contract DSPCTest is DssTest {
         vm.prank(bud);
         vm.expectRevert("DSPC/delta-above-step");
         dspc.set(updates);
+    }
+
+    function test_all_events() public {
+        vm.startPrank(address(pauseProxy));
+        
+        // Test Rely event
+        vm.expectEmit(true, false, false, true);
+        emit Rely(address(0x123));
+        dspc.rely(address(0x123));
+
+        // Test Deny event
+        vm.expectEmit(true, false, false, true);
+        emit Deny(address(0x123));
+        dspc.deny(address(0x123));
+
+        // Test Kiss event
+        vm.expectEmit(true, false, false, true);
+        emit Kiss(address(0x456));
+        dspc.kiss(address(0x456));
+
+        // Test Diss event
+        vm.expectEmit(true, false, false, true);
+        emit Diss(address(0x456));
+        dspc.diss(address(0x456));
+
+        // Test File event (global parameter)
+        vm.expectEmit(true, false, false, true);
+        emit File("tau", 1 days);
+        dspc.file("tau", 1 days);
+
+        // Test File event (ilk parameter)
+        vm.expectEmit(true, true, false, true);
+        emit File(ILK, "max", 5000);
+        dspc.file(ILK, "max", 5000);
+
+        // Test Sync event (via file)
+        uint256 currentDSR = conv.rtob(dss.pot.dsr());
+        vm.expectEmit(true, false, false, true);
+        emit Sync(DSR, currentDSR + 2);
+        dspc.file(DSR, "pin", currentDSR + 2);
+
+        // Test Set event
+        vm.startPrank(bud);
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(DSR, currentDSR + 1);
+        vm.expectEmit(true, false, false, true);
+        emit Set(DSR, currentDSR + 1);
+        dspc.set(updates);
+
+        vm.stopPrank();
     }
 }
