@@ -19,10 +19,10 @@ pragma solidity ^0.8.24;
 import "dss-test/DssTest.sol";
 import {DSPC} from "./DSPC.sol";
 import {DSPCMom} from "./DSPCMom.sol";
-import {ConvMock} from "./mocks/ConvMock.sol";
 import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
-import {DSPCInit} from "./deployment/DSPCInit.sol";
+import {DSPCInit, DSPCConfig, DSPCIlkConfig} from "./deployment/DSPCInit.sol";
 import {DSPCInstance} from "./deployment/DSPCInstance.sol";
+import {ConvMock} from "./mocks/ConvMock.sol";
 
 interface ChiefLike {
     function hat() external view returns (address);
@@ -43,8 +43,8 @@ interface ProxyLike {
 }
 
 contract InitCaller {
-    function init(DssInstance memory dss, DSPCInstance memory inst) external {
-        DSPCInit.init(dss, inst);
+    function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) external {
+        DSPCInit.init(dss, inst, cfg);
     }
 }
 
@@ -96,9 +96,13 @@ contract DSPCMomIntegrationTest is DssTest {
         dspc = DSPC(inst.dspc);
         mom = DSPCMom(inst.mom);
 
-        // Simulate a spell casting
+        // Initialize deployment
+        DSPCConfig memory cfg = DSPCConfig({
+            tau: 0,  // Start with tau = 0 for tests
+            ilks: new DSPCIlkConfig[](0)  // No ilks for this test
+        });
         vm.prank(pause);
-        pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst)));
+        pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
     }
 
     function test_constructor() public view {
