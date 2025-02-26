@@ -25,19 +25,37 @@ interface MomLike {
     function setOwner(address owner) external;
 }
 
+/// @title DSPC Deployment Parameters
+/// @notice Parameters required for deploying the DSPC system
+/// @dev Used to configure the initial setup of DSPC and DSPCMom contracts
 struct DSPCDeployParams {
     address deployer;
+    /// @dev Address deploying the contracts
     address owner;
+    /// @dev Final owner address after deployment
     address jug;
+    /// @dev MakerDAO Jug contract address
     address pot;
+    /// @dev MakerDAO Pot contract address
     address susds;
+    /// @dev SUSDS contract address
     address conv;
 }
+/// @dev Rate converter contract address
 
+/// @title DSPC Deployment Library
+/// @notice Handles deployment of DSPC system contracts
+/// @dev Deploys and configures DSPC and DSPCMom contracts with proper permissions
 library DSPCDeploy {
+    /// @notice Deploy DSPC system contracts
+    /// @dev Deploys DSPC and DSPCMom, sets up initial permissions
+    /// @param params Configuration parameters for deployment
+    /// @return inst Instance containing addresses of deployed contracts
     function deploy(DSPCDeployParams memory params) internal returns (DSPCInstance memory inst) {
+        // Deploy DSPC with core contract references
         inst.dspc = address(new DSPC(params.jug, params.pot, params.susds, params.conv));
 
+        // Deploy DSPCMom for governance
         inst.mom = address(new DSPCMom());
 
         // First set authority for DSPCMom
