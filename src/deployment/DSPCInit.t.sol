@@ -97,27 +97,24 @@ contract DSPCInitTest is DssTest {
     function test_init() public {
         // Create test configuration
         DSPCIlkConfig[] memory ilks = new DSPCIlkConfig[](2);
-        
+
         // Configure ETH-A
         ilks[0] = DSPCIlkConfig({
             ilk: "ETH-A",
-            min: uint16(0),      // 0%
-            max: uint16(1000),   // 10%
-            step: uint16(50)     // 0.5%
+            min: uint16(0), // 0%
+            max: uint16(1000), // 10%
+            step: uint16(50) // 0.5%
         });
 
         // Configure WBTC-A
         ilks[1] = DSPCIlkConfig({
             ilk: "WBTC-A",
-            min: uint16(0),      // 0%
-            max: uint16(1500),   // 15%
-            step: uint16(100)    // 1%
+            min: uint16(0), // 0%
+            max: uint16(1500), // 15%
+            step: uint16(100) // 1%
         });
 
-        DSPCConfig memory cfg = DSPCConfig({
-            tau: 1 days,
-            ilks: ilks
-        });
+        DSPCConfig memory cfg = DSPCConfig({tau: 1 days, ilks: ilks});
 
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));

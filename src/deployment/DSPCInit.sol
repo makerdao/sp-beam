@@ -33,18 +33,24 @@ interface DSPCMomLike {
 /// @title Configuration parameters for a collateral type in DSPC
 /// @dev Used to configure rate parameters for a specific collateral
 struct DSPCIlkConfig {
-    bytes32 ilk;     /// @dev Collateral identifier
-    uint16  min;     /// @dev Minimum rate in basis points [0-65535]
-    uint16  max;     /// @dev Maximum rate in basis points [0-65535]
-    uint16  step;    /// @dev Step size in basis points [0-65535]
+    bytes32 ilk;
+    /// @dev Collateral identifier
+    uint16 min;
+    /// @dev Minimum rate in basis points [0-65535]
+    uint16 max;
+    /// @dev Maximum rate in basis points [0-65535]
+    uint16 step;
 }
+/// @dev Step size in basis points [0-65535]
 
 /// @title Global configuration parameters for DSPC
 /// @dev Used to configure global parameters and collateral-specific settings
 struct DSPCConfig {
-    uint256 tau;           /// @dev Time delay between rate updates
-    DSPCIlkConfig[] ilks;  /// @dev Array of collateral configurations
+    uint256 tau;
+    /// @dev Time delay between rate updates
+    DSPCIlkConfig[] ilks;
 }
+/// @dev Array of collateral configurations
 
 /// @title Dynamic Stability Parameter Controller Initialization
 /// @notice Handles initialization and configuration of the DSPC contract

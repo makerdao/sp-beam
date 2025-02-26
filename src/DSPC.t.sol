@@ -92,11 +92,11 @@ contract DSPCTest is DssTest {
         mom = DSPCMom(inst.mom);
 
         // Initialize deployment
-        DSPCIlkConfig[] memory ilks = new DSPCIlkConfig[](3);  // ETH-A, DSR, SSR
-        
+        DSPCIlkConfig[] memory ilks = new DSPCIlkConfig[](3); // ETH-A, DSR, SSR
+
         // Configure ETH-A
         ilks[0] = DSPCIlkConfig({
-            ilk: ILK,  // Use the constant bytes32 ILK
+            ilk: ILK, // Use the constant bytes32 ILK
             min: uint16(1),
             max: uint16(30000),
             step: uint16(100)
@@ -104,7 +104,7 @@ contract DSPCTest is DssTest {
 
         // Configure DSR
         ilks[1] = DSPCIlkConfig({
-            ilk: DSR,  // Use the constant bytes32 DSR
+            ilk: DSR, // Use the constant bytes32 DSR
             min: uint16(1),
             max: uint16(30000),
             step: uint16(100)
@@ -112,14 +112,14 @@ contract DSPCTest is DssTest {
 
         // Configure SSR
         ilks[2] = DSPCIlkConfig({
-            ilk: SSR,  // Use the constant bytes32 SSR
+            ilk: SSR, // Use the constant bytes32 SSR
             min: uint16(1),
             max: uint16(30000),
             step: uint16(100)
         });
 
         DSPCConfig memory cfg = DSPCConfig({
-            tau: 0,  // Start with tau = 0 for tests
+            tau: 0, // Start with tau = 0 for tests
             ilks: ilks
         });
         vm.prank(pause);
