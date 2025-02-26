@@ -254,12 +254,15 @@ contract DSPC {
         for (uint256 i = 0; i < updates.length; i++) {
             bytes32 id = updates[i].id;
             uint256 bps = updates[i].bps;
-
-            if (block.timestamp >= _cfgs[id].toc + tau) _sync(id);
             Cfg memory cfg = _cfgs[id];
 
             require(bps >= cfg.min, "DSPC/below-min");
-            require(bps <= cfg.max, "DSPC/above-max");
+            require(bps <= cfg.max, "DSPC/above-max");            
+
+            if (block.timestamp >= cfg.toc + tau) {
+                _sync(id);
+                cfg = _cfgs[id];
+            }
 
             uint256 delta = bps > cfg.pin ? bps - cfg.pin : cfg.pin - bps;
             require(delta <= cfg.step, "DSPC/delta-above-step");
