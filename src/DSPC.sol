@@ -106,14 +106,14 @@ contract DSPC {
     event Diss(address indexed usr);
     /**
      * @notice A contract parameter was updated.
-     * @param what The changed parameter name. ["bad"].
+     * @param what The changed parameter name. ["bad" | "tau"].
      * @param data The new value of the parameter.
      */
     event File(bytes32 indexed what, uint256 data);
     /**
      * @notice A Ilk/DSR/SSR parameter was updated.
      * @param id The Ilk/DSR/SSR identifier.
-     * @param what The changed parameter name. ["bad"].
+     * @param what The changed parameter name. ["min" | "max" | "pin" | "step"].
      * @param data The new value of the parameter.
      */
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
@@ -207,7 +207,7 @@ contract DSPC {
 
     /// @notice Configure constraints for a rate
     /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @param what The parameter to configure ("min", "max" or "step")
+    /// @param what The parameter to configure. ["min" | "max" | "pin" | "step"]
     /// @param data The value to set
     /// @dev Emits File event after successful configuration
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
