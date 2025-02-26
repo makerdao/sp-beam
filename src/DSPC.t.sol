@@ -20,7 +20,7 @@ import {DSPC} from "./DSPC.sol";
 import {DSPCMom} from "./DSPCMom.sol";
 import {ConvMock} from "./mocks/ConvMock.sol";
 import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
-import {DSPCInit} from "./deployment/DSPCInit.sol";
+import {DSPCInit, DSPCConfig, DSPCIlkConfig} from "./deployment/DSPCInit.sol";
 import {DSPCInstance} from "./deployment/DSPCInstance.sol";
 
 interface ConvLike {
@@ -38,8 +38,8 @@ interface ProxyLike {
 }
 
 contract InitCaller {
-    function init(DssInstance memory dss, DSPCInstance memory inst) external {
-        DSPCInit.init(dss, inst);
+    function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) external {
+        DSPCInit.init(dss, inst, cfg);
     }
 }
 
@@ -90,25 +90,43 @@ contract DSPCTest is DssTest {
         dspc = DSPC(inst.dspc);
         mom = DSPCMom(inst.mom);
 
-        // Simulate a spell casting
-        vm.prank(pause);
-        pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst)));
+        // Initialize deployment
+        DSPCIlkConfig[] memory ilks = new DSPCIlkConfig[](3); // ETH-A, DSR, SSR
 
-        // The init script does not cover setting ilk specific parameters
-        vm.startPrank(address(pauseProxy));
-        {
-            dspc.file(ILK, "max", 30000);
-            dspc.file(ILK, "min", 1);
-            dspc.file(ILK, "step", 100);
-            dspc.file(DSR, "max", 30000);
-            dspc.file(DSR, "min", 1);
-            dspc.file(DSR, "step", 100);
-            dspc.file(SSR, "max", 30000);
-            dspc.file(SSR, "min", 1);
-            dspc.file(SSR, "step", 100);
-            dspc.kiss(bud);
-        }
-        vm.stopPrank();
+        // Configure ETH-A
+        ilks[0] = DSPCIlkConfig({
+            ilk: ILK, // Use the constant bytes32 ILK
+            min: uint16(1),
+            max: uint16(30000),
+            step: uint16(100)
+        });
+
+        // Configure DSR
+        ilks[1] = DSPCIlkConfig({
+            ilk: DSR, // Use the constant bytes32 DSR
+            min: uint16(1),
+            max: uint16(30000),
+            step: uint16(100)
+        });
+
+        // Configure SSR
+        ilks[2] = DSPCIlkConfig({
+            ilk: SSR, // Use the constant bytes32 SSR
+            min: uint16(1),
+            max: uint16(30000),
+            step: uint16(100)
+        });
+
+        DSPCConfig memory cfg = DSPCConfig({
+            tau: 0, // Start with tau = 0 for tests
+            ilks: ilks
+        });
+        vm.prank(pause);
+        pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
+
+        // Kiss the bud address
+        vm.prank(address(pauseProxy));
+        dspc.kiss(bud);
     }
 
     function test_constructor() public view {
