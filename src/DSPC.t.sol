@@ -155,16 +155,20 @@ contract DSPCTest is DssTest {
         assertEq(dspc.cfgs(ILK).min, 1);
         assertEq(dspc.cfgs(ILK).max, 30000);
         assertEq(dspc.cfgs(ILK).step, 100);
+        assertEq(dspc.cfgs(ILK).pin, 0);
 
         vm.startPrank(address(pauseProxy));
         dspc.file(ILK, "min", 100);
         dspc.file(ILK, "max", 3000);
         dspc.file(ILK, "step", 420);
+        dspc.file(ILK, "pin", 2000);
         vm.stopPrank();
 
         assertEq(dspc.cfgs(ILK).min, 100);
         assertEq(dspc.cfgs(ILK).max, 3000);
         assertEq(dspc.cfgs(ILK).step, 420);
+        assertEq(dspc.cfgs(ILK).pin, 2000);
+        assertEq(dspc.cfgs(ILK).toc, block.timestamp);
     }
 
     function test_file_ilk_invalid() public {
@@ -176,6 +180,12 @@ contract DSPCTest is DssTest {
 
         vm.expectRevert("DSPC/max-too-low");
         dspc.file(ILK, "max", cfg.min - 1);
+
+        vm.expectRevert("DSPC/pin-out-of-bounds");
+        dspc.file(ILK, "pin", cfg.min - 1);
+
+        vm.expectRevert("DSPC/pin-out-of-bounds");
+        dspc.file(ILK, "pin", cfg.max + 1);
 
         vm.expectRevert("DSPC/file-unrecognized-param");
         dspc.file(ILK, "unknown", 100);

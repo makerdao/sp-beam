@@ -220,6 +220,10 @@ contract DSPC {
             _cfgs[id].max = uint16(data);
         } else if (what == "step") {
             _cfgs[id].step = uint16(data);
+        } else if (what == "pin") {
+            require(data >= _cfgs[id].min && data <= _cfgs[id].max, "DSPC/pin-out-of-bounds");
+            _cfgs[id].pin = uint16(data);
+            _cfgs[id].toc = uint64(block.timestamp);
         } else {
             revert("DSPC/file-unrecognized-param");
         }
