@@ -257,7 +257,7 @@ contract DSPC {
             Cfg memory cfg = _cfgs[id];
 
             require(bps >= cfg.min, "DSPC/below-min");
-            require(bps <= cfg.max, "DSPC/above-max");            
+            require(bps <= cfg.max, "DSPC/above-max");
 
             if (block.timestamp >= cfg.toc + tau) {
                 _sync(id);

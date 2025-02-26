@@ -162,11 +162,11 @@ contract DSPCTest is DssTest {
         dspc.file(ILK, "min", 100);
         dspc.file(ILK, "max", 3000);
         dspc.file(ILK, "step", 420);
-        
+
         vm.expectEmit(true, false, false, true);
         emit Sync(ILK, 2000);
         dspc.file(ILK, "pin", 2000);
-        
+
         vm.stopPrank();
 
         assertEq(dspc.cfgs(ILK).min, 100);
@@ -382,7 +382,7 @@ contract DSPCTest is DssTest {
 
     function test_all_events() public {
         vm.startPrank(address(pauseProxy));
-        
+
         // Test Rely event
         vm.expectEmit(true, false, false, true);
         emit Rely(address(0x123));
