@@ -123,6 +123,12 @@ contract DSPC {
      * @param bps The new value of the rate in basis points.
      */
     event Set(bytes32 indexed id, uint256 bps);
+    /**
+     * @notice Emitted when an ilk's pin value is updated
+     * @param id The ilk identifier
+     * @param pin The new pin value
+     */
+    event Sync(bytes32 indexed id, uint256 pin);
 
     // --- Modifiers ---
     modifier auth() {
@@ -224,6 +230,7 @@ contract DSPC {
             require(data >= _cfgs[id].min && data <= _cfgs[id].max, "DSPC/pin-out-of-bounds");
             _cfgs[id].pin = uint16(data);
             _cfgs[id].toc = uint64(block.timestamp);
+            emit Sync(id, data);
         } else {
             revert("DSPC/file-unrecognized-param");
         }
@@ -284,6 +291,7 @@ contract DSPC {
         }
         _cfgs[id].pin = uint16(currentBps);
         _cfgs[id].toc = uint64(block.timestamp);
+        emit Sync(id, currentBps);
     }
 
     // --- Getters ---

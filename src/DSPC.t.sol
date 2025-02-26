@@ -64,6 +64,7 @@ contract DSPCTest is DssTest {
     event Diss(address indexed usr);
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
     event Set(DSPC.ParamChange[] updates);
+    event Sync(bytes32 indexed id, uint256 pin);
 
     function setUp() public {
         vm.createSelectFork("mainnet");
@@ -161,7 +162,11 @@ contract DSPCTest is DssTest {
         dspc.file(ILK, "min", 100);
         dspc.file(ILK, "max", 3000);
         dspc.file(ILK, "step", 420);
+        
+        vm.expectEmit(true, false, false, true);
+        emit Sync(ILK, 2000);
         dspc.file(ILK, "pin", 2000);
+        
         vm.stopPrank();
 
         assertEq(dspc.cfgs(ILK).min, 100);
