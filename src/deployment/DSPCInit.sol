@@ -54,6 +54,8 @@ struct DSPCConfig {
     uint256 tau;
     /// @dev Collateral-specific settings
     DSPCRateConfig[] ilks;
+    /// @dev Bud to be authed within setup
+    address bud;
 }
 /// @dev Array of collateral configurations
 
@@ -90,5 +92,8 @@ library DSPCInit {
             DSPCLike(inst.dspc).file(ilk.id, "min", uint256(ilk.min));
             DSPCLike(inst.dspc).file(ilk.id, "step", uint256(ilk.step));
         }
+
+        // Authorize bud
+        DSPCLike(inst.dspc).kiss(cfg.bud);
     }
 }

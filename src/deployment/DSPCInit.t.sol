@@ -114,7 +114,7 @@ contract DSPCInitTest is DssTest {
             step: uint16(100) // 1%
         });
 
-        DSPCConfig memory cfg = DSPCConfig({tau: 1 days, ilks: ilks});
+        DSPCConfig memory cfg = DSPCConfig({tau: 1 days, ilks: ilks, bud: address(0x0ddaf)});
 
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
@@ -132,6 +132,7 @@ contract DSPCInitTest is DssTest {
 
         // Verify configuration
         assertEq(DSPC(inst.dspc).tau(), cfg.tau, "Wrong tau");
+        assertEq(DSPC(inst.dspc).buds(cfg.bud), 1, "Wrong bud");
 
         // Verify ETH-A config
         DSPC.Cfg memory ethCfg = DSPC(inst.dspc).cfgs("ETH-A");

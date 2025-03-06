@@ -99,7 +99,8 @@ contract DSPCMomIntegrationTest is DssTest {
         // Initialize deployment
         DSPCConfig memory cfg = DSPCConfig({
             tau: 0, // Start with tau = 0 for tests
-            ilks: new DSPCRateConfig[](0) // No ilks for this test
+            ilks: new DSPCRateConfig[](0), // No ilks for this test
+            bud: address(0) // No bud for this test
         });
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));

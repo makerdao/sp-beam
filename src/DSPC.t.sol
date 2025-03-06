@@ -119,14 +119,11 @@ contract DSPCTest is DssTest {
 
         DSPCConfig memory cfg = DSPCConfig({
             tau: 0, // Start with tau = 0 for tests
-            ilks: ilks
+            ilks: ilks,
+            bud: bud
         });
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
-
-        // Kiss the bud address
-        vm.prank(address(pauseProxy));
-        dspc.kiss(bud);
     }
 
     function test_constructor() public view {
