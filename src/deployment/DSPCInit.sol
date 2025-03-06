@@ -36,12 +36,13 @@ interface DSPCMomLike {
 /// @title Configuration parameters for a rate in DSPC
 /// @dev Used to configure rate parameters for a specific rate
 struct DSPCRateConfig {
-    bytes32 id;
     /// @dev Rate identifier
-    uint16 min;
+    bytes32 id;
     /// @dev Minimum rate in basis points
-    uint16 max;
+    uint16 min;
     /// @dev Maximum rate in basis points
+    uint16 max;
+    /// @dev Maximum step size in basis points
     uint16 step;
 }
 /// @dev Step size in basis points [0-65535]
@@ -51,6 +52,7 @@ struct DSPCRateConfig {
 struct DSPCConfig {
     /// @dev Time delay between rate updates
     uint256 tau;
+    /// @dev Collateral-specific settings
     DSPCRateConfig[] ilks;
 }
 /// @dev Array of collateral configurations
