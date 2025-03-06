@@ -58,9 +58,7 @@ library DSPCDeploy {
         // Deploy DSPCMom for governance
         inst.mom = address(new DSPCMom());
 
-        // First set authority for DSPCMom
-        DSPCMom(inst.mom).setAuthority(params.owner);
-        // Then switch owners
+        // Switch owners
         ScriptTools.switchOwner(inst.dspc, params.deployer, params.owner);
         MomLike(inst.mom).setOwner(params.owner);
     }
