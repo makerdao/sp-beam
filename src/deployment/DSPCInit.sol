@@ -19,8 +19,11 @@ pragma solidity ^0.8.24;
 import {DssInstance} from "dss-test/MCD.sol";
 import {DSPCInstance} from "./DSPCInstance.sol";
 
-interface DSPCLike {
+interface RelyLike {
     function rely(address usr) external;
+}
+
+interface DSPCLike is RelyLike {
     function file(bytes32 what, uint256 data) external;
     function file(bytes32 ilk, bytes32 what, uint256 data) external;
     function kiss(address usr) external;
@@ -30,15 +33,15 @@ interface DSPCMomLike {
     function setAuthority(address usr) external;
 }
 
-/// @title Configuration parameters for a collateral type in DSPC
-/// @dev Used to configure rate parameters for a specific collateral
-struct DSPCIlkConfig {
-    bytes32 ilk;
-    /// @dev Collateral identifier
+/// @title Configuration parameters for a rate in DSPC
+/// @dev Used to configure rate parameters for a specific rate
+struct DSPCRateConfig {
+    bytes32 id;
+    /// @dev Rate identifier
     uint16 min;
-    /// @dev Minimum rate in basis points [0-65535]
+    /// @dev Minimum rate in basis points
     uint16 max;
-    /// @dev Maximum rate in basis points [0-65535]
+    /// @dev Maximum rate in basis points
     uint16 step;
 }
 /// @dev Step size in basis points [0-65535]
@@ -46,8 +49,8 @@ struct DSPCIlkConfig {
 /// @title Global configuration parameters for DSPC
 /// @dev Used to configure global parameters and collateral-specific settings
 struct DSPCConfig {
-    uint256 tau;
     /// @dev Time delay between rate updates
+    uint256 tau;
     DSPCIlkConfig[] ilks;
 }
 /// @dev Array of collateral configurations
@@ -63,29 +66,27 @@ library DSPCInit {
     /// @param cfg The configuration parameters for DSPC
     function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) internal {
         // Set up permissions
-        DSPCLike dspc = DSPCLike(inst.dspc);
-        DSPCMomLike mom = DSPCMomLike(inst.mom);
 
         // Authorize DSPCMom in DSPC
-        dspc.rely(inst.mom);
+        RelyLike(inst.dspc).rely(inst.mom);
 
         // Set DSPCMom authority to MCD_ADM
-        mom.setAuthority(dss.chainlog.getAddress("MCD_ADM"));
+        MomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
 
         // Authorize DSPC in core contracts
         dss.jug.rely(inst.dspc);
         dss.pot.rely(inst.dspc);
-        DSPCLike(dss.chainlog.getAddress("SUSDS")).rely(inst.dspc);
+        RelyLike(dss.chainlog.getAddress("SUSDS")).rely(inst.dspc);
 
         // Configure global parameters
-        dspc.file("tau", cfg.tau);
+        DSPCLike(inst.dspc).file("tau", cfg.tau);
 
         // Configure ilks
         for (uint256 i = 0; i < cfg.ilks.length; i++) {
             DSPCIlkConfig memory ilk = cfg.ilks[i];
-            dspc.file(ilk.ilk, "max", uint256(ilk.max));
-            dspc.file(ilk.ilk, "min", uint256(ilk.min));
-            dspc.file(ilk.ilk, "step", uint256(ilk.step));
+            DSPCLike(inst.dspc).file(ilk.ilk, "max", uint256(ilk.max));
+            DSPCLike(inst.dspc).file(ilk.ilk, "min", uint256(ilk.min));
+            DSPCLike(inst.dspc).file(ilk.ilk, "step", uint256(ilk.step));
         }
     }
 }
