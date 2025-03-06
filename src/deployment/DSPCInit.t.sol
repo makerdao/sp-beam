@@ -21,7 +21,7 @@ import {DssInstance} from "dss-test/MCD.sol";
 import {DSPC} from "../DSPC.sol";
 import {DSPCMom} from "../DSPCMom.sol";
 import {DSPCDeploy, DSPCDeployParams} from "./DSPCDeploy.sol";
-import {DSPCInit, DSPCConfig, DSPCIlkConfig} from "./DSPCInit.sol";
+import {DSPCInit, DSPCConfig, DSPCRateConfig} from "./DSPCInit.sol";
 import {DSPCInstance} from "./DSPCInstance.sol";
 import {ConvMock} from "../mocks/ConvMock.sol";
 
@@ -96,19 +96,19 @@ contract DSPCInitTest is DssTest {
 
     function test_init() public {
         // Create test configuration
-        DSPCIlkConfig[] memory ilks = new DSPCIlkConfig[](2);
+        DSPCRateConfig[] memory ilks = new DSPCRateConfig[](2);
 
         // Configure ETH-A
-        ilks[0] = DSPCIlkConfig({
-            ilk: "ETH-A",
+        ilks[0] = DSPCRateConfig({
+            id: "ETH-A",
             min: uint16(0), // 0%
             max: uint16(1000), // 10%
             step: uint16(50) // 0.5%
         });
 
         // Configure WBTC-A
-        ilks[1] = DSPCIlkConfig({
-            ilk: "WBTC-A",
+        ilks[1] = DSPCRateConfig({
+            id: "WBTC-A",
             min: uint16(0), // 0%
             max: uint16(1500), // 15%
             step: uint16(100) // 1%

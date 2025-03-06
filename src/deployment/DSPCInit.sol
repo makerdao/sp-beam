@@ -51,7 +51,7 @@ struct DSPCRateConfig {
 struct DSPCConfig {
     /// @dev Time delay between rate updates
     uint256 tau;
-    DSPCIlkConfig[] ilks;
+    DSPCRateConfig[] ilks;
 }
 /// @dev Array of collateral configurations
 
@@ -71,7 +71,7 @@ library DSPCInit {
         RelyLike(inst.dspc).rely(inst.mom);
 
         // Set DSPCMom authority to MCD_ADM
-        MomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
+        DSPCMomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
 
         // Authorize DSPC in core contracts
         dss.jug.rely(inst.dspc);
@@ -83,10 +83,10 @@ library DSPCInit {
 
         // Configure ilks
         for (uint256 i = 0; i < cfg.ilks.length; i++) {
-            DSPCIlkConfig memory ilk = cfg.ilks[i];
-            DSPCLike(inst.dspc).file(ilk.ilk, "max", uint256(ilk.max));
-            DSPCLike(inst.dspc).file(ilk.ilk, "min", uint256(ilk.min));
-            DSPCLike(inst.dspc).file(ilk.ilk, "step", uint256(ilk.step));
+            DSPCRateConfig memory ilk = cfg.ilks[i];
+            DSPCLike(inst.dspc).file(ilk.id, "max", uint256(ilk.max));
+            DSPCLike(inst.dspc).file(ilk.id, "min", uint256(ilk.min));
+            DSPCLike(inst.dspc).file(ilk.id, "step", uint256(ilk.step));
         }
     }
 }

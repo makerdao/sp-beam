@@ -20,7 +20,7 @@ import {DSPC} from "./DSPC.sol";
 import {DSPCMom} from "./DSPCMom.sol";
 import {ConvMock} from "./mocks/ConvMock.sol";
 import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
-import {DSPCInit, DSPCConfig, DSPCIlkConfig} from "./deployment/DSPCInit.sol";
+import {DSPCInit, DSPCConfig, DSPCRateConfig} from "./deployment/DSPCInit.sol";
 import {DSPCInstance} from "./deployment/DSPCInstance.sol";
 
 interface ConvLike {
@@ -91,27 +91,27 @@ contract DSPCTest is DssTest {
         mom = DSPCMom(inst.mom);
 
         // Initialize deployment
-        DSPCIlkConfig[] memory ilks = new DSPCIlkConfig[](3); // ETH-A, DSR, SSR
+        DSPCRateConfig[] memory ilks = new DSPCRateConfig[](3); // ETH-A, DSR, SSR
 
         // Configure ETH-A
-        ilks[0] = DSPCIlkConfig({
-            ilk: ILK, // Use the constant bytes32 ILK
+        ilks[0] = DSPCRateConfig({
+            id: ILK, // Use the constant bytes32 ILK
             min: uint16(1),
             max: uint16(30000),
             step: uint16(100)
         });
 
         // Configure DSR
-        ilks[1] = DSPCIlkConfig({
-            ilk: DSR, // Use the constant bytes32 DSR
+        ilks[1] = DSPCRateConfig({
+            id: DSR, // Use the constant bytes32 DSR
             min: uint16(1),
             max: uint16(30000),
             step: uint16(100)
         });
 
         // Configure SSR
-        ilks[2] = DSPCIlkConfig({
-            ilk: SSR, // Use the constant bytes32 SSR
+        ilks[2] = DSPCRateConfig({
+            id: SSR, // Use the constant bytes32 SSR
             min: uint16(1),
             max: uint16(30000),
             step: uint16(100)

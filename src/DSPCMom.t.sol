@@ -21,7 +21,7 @@ import {DSPC} from "./DSPC.sol";
 import {DSPCMom} from "./DSPCMom.sol";
 import {ConvMock} from "./mocks/ConvMock.sol";
 import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
-import {DSPCInit, DSPCConfig, DSPCIlkConfig} from "./deployment/DSPCInit.sol";
+import {DSPCInit, DSPCConfig, DSPCRateConfig} from "./deployment/DSPCInit.sol";
 import {DSPCInstance} from "./deployment/DSPCInstance.sol";
 
 interface ChiefLike {
@@ -99,7 +99,7 @@ contract DSPCMomIntegrationTest is DssTest {
         // Initialize deployment
         DSPCConfig memory cfg = DSPCConfig({
             tau: 0, // Start with tau = 0 for tests
-            ilks: new DSPCIlkConfig[](0) // No ilks for this test
+            ilks: new DSPCRateConfig[](0) // No ilks for this test
         });
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
