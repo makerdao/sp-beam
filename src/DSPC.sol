@@ -195,9 +195,9 @@ contract DSPC {
     function file(bytes32 what, uint256 data) external auth {
         if (what == "bad") {
             require(data <= 1, "DSPC/invalid-bad-value");
-            bad = data;
+            bad = uint8(data);
         } else if (what == "tau") {
-            tau = data;
+            tau = uint64(data);
         } else {
             revert("DSPC/file-unrecognized-param");
         }
@@ -240,7 +240,7 @@ contract DSPC {
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
         require(block.timestamp >= tau + toc, "DSPC/too-early");
-        toc = block.timestamp;
+        toc = uint128(block.timestamp);
 
         // Validate all updates in the batch
         for (uint256 i = 0; i < updates.length; i++) {
