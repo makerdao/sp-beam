@@ -197,6 +197,7 @@ contract DSPC {
             require(data <= 1, "DSPC/invalid-bad-value");
             bad = uint8(data);
         } else if (what == "tau") {
+            require(data <= type(uint64).max, "DSPC/invalid-tau-value");
             tau = uint64(data);
         } else {
             revert("DSPC/file-unrecognized-param");
