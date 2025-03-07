@@ -77,11 +77,11 @@ contract DSPC {
     /// @notice Mapping of rate constraints
     mapping(bytes32 => Cfg) private _cfgs;
     /// @notice Circuit breaker flag
-    uint256 public bad;
+    uint8 public bad;
     /// @notice Cooldown period between rate changes in seconds
-    uint256 public tau;
+    uint64 public tau;
     /// @notice Last time when rates were updated (Unix timestamp)
-    uint256 public toc;
+    uint128 public toc;
 
     // --- Events ---
     /**
