@@ -163,6 +163,9 @@ contract DSPCTest is DssTest {
         dspc.file("tau", 1 days);
         assertEq(dspc.tau(), 1 days);
 
+        vm.expectRevert("DSPC/invalid-tau-value");
+        dspc.file("tau", uint256(type(uint64).max) + 1);
+
         vm.stopPrank();
     }
 
