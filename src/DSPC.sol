@@ -229,7 +229,7 @@ contract DSPC {
     }
 
     /// @notice Apply rate updates
-    /// @param updates Array of rate updates to apply
+    /// @param updates Array of rate updates to apply (strictly ordered by id)
     /// @dev Each update is validated against configured constraints before being applied
     /// @dev Emits Set event after all updates are successfully applied
     /// @dev Reverts if:
@@ -249,6 +249,7 @@ contract DSPC {
             uint256 bps = updates[i].bps;
             Cfg memory cfg = _cfgs[id];
 
+            if (i > 0) require(id > updates[i - 1].id, "DSPC/updates-out-of-order");
             require(bps >= cfg.min, "DSPC/below-min");
             require(bps <= cfg.max, "DSPC/above-max");
 

@@ -250,8 +250,8 @@ contract DSPCTest is DssTest {
         uint256 ssrTarget = conv.rtob(susds.ssr()) + 50;
 
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](3);
-        updates[0] = DSPC.ParamChange(ILK, ilkTarget);
-        updates[1] = DSPC.ParamChange(DSR, dsrTarget);
+        updates[0] = DSPC.ParamChange(DSR, dsrTarget);
+        updates[1] = DSPC.ParamChange(ILK, ilkTarget);
         updates[2] = DSPC.ParamChange(SSR, ssrTarget);
 
         vm.prank(bud);
@@ -261,6 +261,18 @@ contract DSPCTest is DssTest {
         assertEq(duty, conv.btor(ilkTarget));
         assertEq(dss.pot.dsr(), conv.btor(dsrTarget));
         assertEq(susds.ssr(), conv.btor(ssrTarget));
+    }
+
+    function test_set_duplicate() public {
+        (uint256 duty,) = dss.jug.ilks(ILK);
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
+        updates[0] = DSPC.ParamChange(ILK, conv.rtob(duty) - 100);
+        updates[1] = DSPC.ParamChange(ILK, conv.rtob(duty) - 200); // duplicate, pushing rate beyond step
+
+        vm.prank(bud);
+        vm.expectRevert("DSPC/updates-out-of-order");
+        dspc.set(updates);
     }
 
     function test_set_empty() public {
