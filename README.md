@@ -7,7 +7,7 @@ A module for MakerDAO that enables direct changes to stability parameters (duty,
 The DSPC module provides a streamlined way to modify stability parameters in the Maker Protocol, including:
 - Stability fees (duty) for different collateral types via the Jug contract
 - Dai Savings Rate (DSR) via the Pot contract
-- Staked Dai Savings Rate (SSR) via the sUSD contract
+- Sky Savings Rate (SSR) via the sUSDS contract
 
 ## Features
 
