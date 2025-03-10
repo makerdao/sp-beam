@@ -249,6 +249,7 @@ contract DSPC {
             uint256 bps = updates[i].bps;
             Cfg memory cfg = cfgs[id];
 
+            require(cfg.step > 0, "DSPC/ilk-not-configured");
             if (i > 0) require(id > updates[i - 1].id, "DSPC/updates-out-of-order");
             require(bps >= cfg.min, "DSPC/below-min");
             require(bps <= cfg.max, "DSPC/above-max");

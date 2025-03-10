@@ -277,6 +277,15 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
+    function test_revert_set_unexisting_ilk() public {
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange("PEPE-A", 10000);
+
+        vm.prank(bud);
+        vm.expectRevert("DSPC/ilk-not-configured");
+        dspc.set(updates);
+    }
+
     function test_revert_set_empty() public {
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](0);
 
