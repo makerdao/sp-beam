@@ -211,6 +211,7 @@ contract DSPC {
     /// @param what The parameter to configure ("min", "max" or "step")
     /// @param data The value to set
     /// @dev Emits File event after successful configuration
+    /// @dev Note that ordering may be relevant if setting min and max in the same transaction, as the transaction may revert if the new max is lower than the old min (or vice versa).
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
         require(data <= type(uint16).max, "DSPC/invalid-value");
         if (what == "min") {
