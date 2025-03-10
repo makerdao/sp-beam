@@ -135,15 +135,15 @@ contract DSPCInitTest is DssTest {
         assertEq(DSPC(inst.dspc).buds(cfg.bud), 1, "Wrong bud");
 
         // Verify ETH-A config
-        DSPC.Cfg memory ethCfg = DSPC(inst.dspc).cfgs("ETH-A");
-        assertEq(ethCfg.min, ilks[0].min, "Wrong ETH-A min");
-        assertEq(ethCfg.max, ilks[0].max, "Wrong ETH-A max");
-        assertEq(ethCfg.step, ilks[0].step, "Wrong ETH-A step");
+        (uint16 min, uint16 max, uint16 step) = DSPC(inst.dspc).cfgs("ETH-A");
+        assertEq(min, ilks[0].min, "Wrong ETH-A min");
+        assertEq(max, ilks[0].max, "Wrong ETH-A max");
+        assertEq(step, ilks[0].step, "Wrong ETH-A step");
 
         // Verify WBTC-A config
-        DSPC.Cfg memory wbtcCfg = DSPC(inst.dspc).cfgs("WBTC-A");
-        assertEq(wbtcCfg.min, ilks[1].min, "Wrong WBTC-A min");
-        assertEq(wbtcCfg.max, ilks[1].max, "Wrong WBTC-A max");
-        assertEq(wbtcCfg.step, ilks[1].step, "Wrong WBTC-A step");
+        (min, max, step) = DSPC(inst.dspc).cfgs("WBTC-A");
+        assertEq(min, ilks[1].min, "Wrong WBTC-A min");
+        assertEq(max, ilks[1].max, "Wrong WBTC-A max");
+        assertEq(step, ilks[1].step, "Wrong WBTC-A step");
     }
 }

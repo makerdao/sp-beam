@@ -170,9 +170,10 @@ contract DSPCTest is DssTest {
     }
 
     function test_file_ilk() public {
-        assertEq(dspc.cfgs(ILK).min, 1);
-        assertEq(dspc.cfgs(ILK).max, 30000);
-        assertEq(dspc.cfgs(ILK).step, 100);
+        (uint16 min, uint16 max, uint16 step) = dspc.cfgs(ILK);
+        assertEq(min, 1);
+        assertEq(max, 30000);
+        assertEq(step, 100);
 
         vm.startPrank(address(pauseProxy));
         dspc.file(ILK, "min", 100);
@@ -180,20 +181,21 @@ contract DSPCTest is DssTest {
         dspc.file(ILK, "step", 420);
         vm.stopPrank();
 
-        assertEq(dspc.cfgs(ILK).min, 100);
-        assertEq(dspc.cfgs(ILK).max, 3000);
-        assertEq(dspc.cfgs(ILK).step, 420);
+        (min, max, step) = dspc.cfgs(ILK);
+        assertEq(min, 100);
+        assertEq(max, 3000);
+        assertEq(step, 420);
     }
 
     function test_revert_file_ilk_invalid() public {
         vm.startPrank(address(pauseProxy));
-        DSPC.Cfg memory cfg = dspc.cfgs(ILK);
+        (uint16 min, uint16 max,) = dspc.cfgs(ILK);
 
         vm.expectRevert("DSPC/min-too-high");
-        dspc.file(ILK, "min", cfg.max + 1);
+        dspc.file(ILK, "min", max + 1);
 
         vm.expectRevert("DSPC/max-too-low");
-        dspc.file(ILK, "max", cfg.min - 1);
+        dspc.file(ILK, "max", min - 1);
 
         vm.expectRevert("DSPC/file-unrecognized-param");
         dspc.file(ILK, "unknown", 100);

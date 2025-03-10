@@ -75,7 +75,7 @@ contract DSPC {
     /// @notice Mapping of addresses that can operate this module
     mapping(address => uint256) public buds;
     /// @notice Mapping of rate constraints
-    mapping(bytes32 => Cfg) private _cfgs;
+    mapping(bytes32 => Cfg) public cfgs;
     /// @notice Circuit breaker flag
     uint8 public bad;
     /// @notice Cooldown period between rate changes in seconds
@@ -214,13 +214,13 @@ contract DSPC {
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
         require(data <= type(uint16).max, "DSPC/invalid-value");
         if (what == "min") {
-            require(data <= _cfgs[id].max, "DSPC/min-too-high");
-            _cfgs[id].min = uint16(data);
+            require(data <= cfgs[id].max, "DSPC/min-too-high");
+            cfgs[id].min = uint16(data);
         } else if (what == "max") {
-            require(data >= _cfgs[id].min, "DSPC/max-too-low");
-            _cfgs[id].max = uint16(data);
+            require(data >= cfgs[id].min, "DSPC/max-too-low");
+            cfgs[id].max = uint16(data);
         } else if (what == "step") {
-            _cfgs[id].step = uint16(data);
+            cfgs[id].step = uint16(data);
         } else {
             revert("DSPC/file-unrecognized-param");
         }
@@ -247,7 +247,7 @@ contract DSPC {
         for (uint256 i = 0; i < updates.length; i++) {
             bytes32 id = updates[i].id;
             uint256 bps = updates[i].bps;
-            Cfg memory cfg = _cfgs[id];
+            Cfg memory cfg = cfgs[id];
 
             if (i > 0) require(id > updates[i - 1].id, "DSPC/updates-out-of-order");
             require(bps >= cfg.min, "DSPC/below-min");
@@ -282,14 +282,5 @@ contract DSPC {
             }
             emit Set(id, bps);
         }
-    }
-
-    // --- Getters ---
-    /// @notice Get configuration for a rate
-    /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @return The configuration struct containing min, max and step values
-    /// @dev Returns a Cfg struct with min, max and step values for the specified rate
-    function cfgs(bytes32 id) external view returns (Cfg memory) {
-        return _cfgs[id];
     }
 }
