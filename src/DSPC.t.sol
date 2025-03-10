@@ -185,7 +185,7 @@ contract DSPCTest is DssTest {
         assertEq(dspc.cfgs(ILK).step, 420);
     }
 
-    function test_file_ilk_invalid() public {
+    function test_revert_file_ilk_invalid() public {
         vm.startPrank(address(pauseProxy));
         DSPC.Cfg memory cfg = dspc.cfgs(ILK);
 
@@ -263,7 +263,7 @@ contract DSPCTest is DssTest {
         assertEq(susds.ssr(), conv.btor(ssrTarget));
     }
 
-    function test_set_duplicate() public {
+    function test_revert_set_duplicate() public {
         (uint256 duty,) = dss.jug.ilks(ILK);
 
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
@@ -275,7 +275,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_set_empty() public {
+    function test_revert_set_empty() public {
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](0);
 
         vm.expectRevert("DSPC/empty-batch");
@@ -283,7 +283,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_set_unauthorized() public {
+    function test_revert_set_unauthorized() public {
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
         updates[0] = DSPC.ParamChange(ILK, 100);
 
@@ -291,7 +291,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_set_below_min() public {
+    function test_revert_set_below_min() public {
         vm.prank(address(pauseProxy));
         dspc.file(ILK, "min", 100);
 
@@ -303,7 +303,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_set_above_max() public {
+    function test_revert_set_above_max() public {
         vm.prank(address(pauseProxy));
         dspc.file(ILK, "max", 100);
 
@@ -315,7 +315,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_set_delta_above_step() public {
+    function test_revert_set_delta_above_step() public {
         vm.prank(address(pauseProxy));
         dspc.file(ILK, "step", 100);
 
@@ -327,7 +327,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_set_before_cooldown() public {
+    function test_revert_set_before_cooldown() public {
         vm.prank(address(pauseProxy));
         dspc.file("tau", 100);
         uint256 currentDSR = conv.rtob(dss.pot.dsr());

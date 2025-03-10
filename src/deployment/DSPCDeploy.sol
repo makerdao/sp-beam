@@ -29,19 +29,19 @@ interface MomLike {
 /// @notice Parameters required for deploying the DSPC system
 /// @dev Used to configure the initial setup of DSPC and DSPCMom contracts
 struct DSPCDeployParams {
-    address deployer;
     /// @dev Address deploying the contracts
-    address owner;
+    address deployer;
     /// @dev Final owner address after deployment
-    address jug;
+    address owner;
     /// @dev MakerDAO Jug contract address
-    address pot;
+    address jug;
     /// @dev MakerDAO Pot contract address
-    address susds;
+    address pot;
     /// @dev SUSDS contract address
+    address susds;
+    /// @dev Rate converter contract address
     address conv;
 }
-/// @dev Rate converter contract address
 
 /// @title DSPC Deployment Library
 /// @notice Handles deployment of DSPC system contracts

@@ -106,14 +106,14 @@ contract DSPC {
     event Diss(address indexed usr);
     /**
      * @notice A contract parameter was updated.
-     * @param what The changed parameter name. ["bad"].
+     * @param what The changed parameter name.
      * @param data The new value of the parameter.
      */
     event File(bytes32 indexed what, uint256 data);
     /**
      * @notice A Ilk/DSR/SSR parameter was updated.
      * @param id The Ilk/DSR/SSR identifier.
-     * @param what The changed parameter name. ["bad"].
+     * @param what The changed parameter name.
      * @param data The new value of the parameter.
      */
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
@@ -231,7 +231,7 @@ contract DSPC {
     /// @notice Apply rate updates
     /// @param updates Array of rate updates to apply (strictly ordered by id)
     /// @dev Each update is validated against configured constraints before being applied
-    /// @dev Emits Set event after all updates are successfully applied
+    /// @dev Emits Set event for each update.
     /// @dev Reverts if:
     ///      - Empty updates array
     ///      - Cooldown not expired
@@ -287,8 +287,8 @@ contract DSPC {
     // --- Getters ---
     /// @notice Get configuration for a rate
     /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @return The configuration struct containing min and max values
-    /// @dev Returns a Cfg struct with min and max values for the specified rate
+    /// @return The configuration struct containing min, max and step values
+    /// @dev Returns a Cfg struct with min, max and step values for the specified rate
     function cfgs(bytes32 id) external view returns (Cfg memory) {
         return _cfgs[id];
     }
