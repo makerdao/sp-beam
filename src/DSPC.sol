@@ -194,7 +194,7 @@ contract DSPC {
     /// @dev Emits File event after successful configuration
     function file(bytes32 what, uint256 data) external auth {
         if (what == "bad") {
-            require(data <= 1, "DSPC/invalid-bad-value");
+            require(data == 0 || data == 1, "DSPC/invalid-bad-value");
             bad = uint8(data);
         } else if (what == "tau") {
             require(data <= type(uint64).max, "DSPC/invalid-tau-value");
