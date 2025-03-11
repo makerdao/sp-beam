@@ -282,7 +282,7 @@ contract DSPCTest is DssTest {
         updates[0] = DSPC.ParamChange("PEPE-A", 10000);
 
         vm.prank(bud);
-        vm.expectRevert("DSPC/ilk-not-configured");
+        vm.expectRevert("DSPC/rate-not-configured");
         dspc.set(updates);
     }
 
