@@ -189,7 +189,7 @@ contract DSPC {
     }
 
     /// @notice Configure module parameters
-    /// @param what The parameter to configure
+    /// @param what The parameter to configure ("bad" or "tau")
     /// @param data The value to set
     /// @dev Emits File event after successful configuration
     function file(bytes32 what, uint256 data) external auth {
