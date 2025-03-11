@@ -251,11 +251,14 @@ contract DSPC {
         bytes32 last;
         for (uint256 i = 0; i < updates.length; i++) {
             bytes32 id = updates[i].id;
+
+            require(id > last, "DSPC/updates-out-of-order");
+            last = id;
+
             uint256 bps = updates[i].bps;
             Cfg memory cfg = cfgs[id];
 
             require(cfg.step > 0, "DSPC/rate-not-configured");
-            require(id > last, "DSPC/updates-out-of-order");
             require(bps >= cfg.min, "DSPC/below-min");
             require(bps <= cfg.max, "DSPC/above-max");
 
@@ -273,8 +276,6 @@ contract DSPC {
             // Calculates absolute difference between the old and the new rate
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
             require(delta <= cfg.step, "DSPC/delta-above-step");
-
-            last = id;
 
             // Execute the update
             uint256 ray = conv.btor(bps);
