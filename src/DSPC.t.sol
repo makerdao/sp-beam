@@ -277,7 +277,7 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 
-    function test_revert_set_unexisting_ilk() public {
+    function test_revert_set_not_configured_rate() public {
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
         updates[0] = DSPC.ParamChange("PEPE-A", 10000);
 
