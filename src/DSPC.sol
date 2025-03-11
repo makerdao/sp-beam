@@ -213,6 +213,10 @@ contract DSPC {
     /// @dev Emits File event after successful configuration
     /// @dev Note that ordering may be relevant if setting min and max in the same transaction, as the transaction may revert if the new max is lower than the old min (or vice versa).
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
+        if (id != "DSR" && id != "SSR") {
+            (, uint256 rho) = jug.ilks(id);
+            require(rho > 0, "DSPC/ilk-not-initialized");
+        }
         require(data <= type(uint16).max, "DSPC/invalid-value");
         if (what == "min") {
             require(data <= cfgs[id].max, "DSPC/min-too-high");

@@ -203,6 +203,9 @@ contract DSPCTest is DssTest {
         vm.expectRevert("DSPC/invalid-value");
         dspc.file(ILK, "max", uint256(type(uint16).max) + 1);
 
+        vm.expectRevert("DSPC/ilk-not-initialized");
+        dspc.file("MOG-A", "min", 100);
+
         vm.stopPrank();
     }
 
