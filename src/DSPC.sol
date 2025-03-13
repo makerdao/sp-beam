@@ -276,11 +276,11 @@ contract DSPC {
                 oldBps = conv.rtob(duty);
             }
 
+            require(oldBps >= cfg.min && oldBps <= cfg.max, "DSPC/rate-out-of-bounds");
+
             // Calculates absolute difference between the old and the new rate
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
             require(delta <= cfg.step, "DSPC/delta-above-step");
-
-            require(oldBps >= cfg.min && oldBps <= cfg.max, "DSPC/rate-out-of-bounds");
 
             // Execute the update
             uint256 ray = conv.btor(bps);

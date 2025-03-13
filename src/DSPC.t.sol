@@ -147,28 +147,15 @@ contract DSPCTest is DssTest {
     }
 
     function test_file() public {
+        checkFileUint(address(dspc), "DSPC", ["bad", "tau", "toc"]);
+        
         vm.startPrank(address(pauseProxy));
-
-        assertEq(dspc.bad(), 0);
-        dspc.file("bad", 1);
-        assertEq(dspc.bad(), 1);
 
         vm.expectRevert("DSPC/invalid-bad-value");
         dspc.file("bad", 2);
 
-        vm.expectRevert("DSPC/file-unrecognized-param");
-        dspc.file("unknown", 1);
-
-        assertEq(dspc.tau(), 0);
-        dspc.file("tau", 1 days);
-        assertEq(dspc.tau(), 1 days);
-
         vm.expectRevert("DSPC/invalid-tau-value");
         dspc.file("tau", uint256(type(uint64).max) + 1);
-
-        assertEq(dspc.toc(), 0);
-        dspc.file("toc", block.timestamp);
-        assertEq(dspc.toc(), block.timestamp);
 
         vm.expectRevert("DSPC/invalid-toc-value");
         dspc.file("toc", uint256(type(uint128).max) + 1);
@@ -382,4 +369,3 @@ contract DSPCTest is DssTest {
     }
 }
 
-// 1000000008441243084037259619
