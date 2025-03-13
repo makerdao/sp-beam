@@ -97,7 +97,7 @@ contract DSPCTest is DssTest {
         ilks[0] = DSPCRateConfig({
             id: ILK, // Use the constant bytes32 ILK
             min: uint16(1),
-            max: uint16(30000),
+            max: uint16(3000),
             step: uint16(100)
         });
 
@@ -105,7 +105,7 @@ contract DSPCTest is DssTest {
         ilks[1] = DSPCRateConfig({
             id: DSR, // Use the constant bytes32 DSR
             min: uint16(1),
-            max: uint16(30000),
+            max: uint16(3000),
             step: uint16(100)
         });
 
@@ -113,7 +113,7 @@ contract DSPCTest is DssTest {
         ilks[2] = DSPCRateConfig({
             id: SSR, // Use the constant bytes32 SSR
             min: uint16(1),
-            max: uint16(30000),
+            max: uint16(3000),
             step: uint16(100)
         });
 
@@ -179,7 +179,7 @@ contract DSPCTest is DssTest {
     function test_file_ilk() public {
         (uint16 min, uint16 max, uint16 step) = dspc.cfgs(ILK);
         assertEq(min, 1);
-        assertEq(max, 30000);
+        assertEq(max, 3000);
         assertEq(step, 100);
 
         vm.startPrank(address(pauseProxy));
@@ -366,4 +366,20 @@ contract DSPCTest is DssTest {
         vm.expectRevert("DSPC/too-early");
         dspc.set(updates);
     }
+
+    function test_revert_set_rate_outside_range() public {
+        dss.jug.drip(ILK);
+        uint256 rate = conv.btor(3050);
+        vm.prank(address(pauseProxy));
+        dss.jug.file(ILK, "duty", rate); // outside range but within step
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(ILK, 2999);
+
+        vm.expectRevert("DSPC/rate-out-of-bounds");
+        vm.prank(bud);
+        dspc.set(updates);
+    }
 }
+
+// 1000000008441243084037259619

@@ -198,7 +198,7 @@ contract DSPC {
             bad = uint8(data);
         } else if (what == "tau") {
             require(data <= type(uint64).max, "DSPC/invalid-tau-value");
-            tau = uint64(data);            
+            tau = uint64(data);
         } else if (what == "toc") {
             require(data <= type(uint128).max, "DSPC/invalid-toc-value");
             toc = uint128(data);
@@ -279,6 +279,8 @@ contract DSPC {
             // Calculates absolute difference between the old and the new rate
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
             require(delta <= cfg.step, "DSPC/delta-above-step");
+
+            require(oldBps >= cfg.min && oldBps <= cfg.max, "DSPC/rate-out-of-bounds");
 
             // Execute the update
             uint256 ray = conv.btor(bps);
