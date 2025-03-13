@@ -243,8 +243,11 @@ contract DSPC {
     /// @dev Reverts if:
     ///      - Empty updates array
     ///      - Cooldown not expired
+    ///      - Ilks out of order
+    ///      - Rate (ilk) not configured
     ///      - Rate below configured minimum
     ///      - Rate above configured maximum
+    ///      - Current system rate out of bounds (not between configured minimum and maximum)
     ///      - Rate change above configured step
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
