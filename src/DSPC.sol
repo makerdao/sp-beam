@@ -262,10 +262,10 @@ contract DSPC {
     ///      5. Calls drip() before each update to accrue fees
     /// @dev Reverts if:
     ///      - Caller not authorized (DSPC/not-facilitator)
-    ///      - Module halted, bad = 1 (DSPC/module-halted)    
+    ///      - Module halted, bad = 1 (DSPC/module-halted)
     ///      - Empty updates array (DSPC/empty-batch)
     ///      - Cooldown period not elapsed (DSPC/too-early)
-    ///      - Updates not ordered alphabetically by id (DSPC/updates-out-of-order)    
+    ///      - Updates not ordered alphabetically by id (DSPC/updates-out-of-order)
     ///      - Rate not configured, step = 0 (DSPC/rate-not-configured)
     ///      - New rate < min (DSPC/below-min)
     ///      - New rate > max (DSPC/above-max)
