@@ -31,8 +31,8 @@ contract DSPCDeployScriptToSepolia is Script {
     function run() external {
         vm.startBroadcast();
 
-        ConvMock conv = new ConvMock();
-        console.log("convMock", address(conv));
+        ConvMock conv = ConvMock(0x0C2302276fe7cF508bEBEcf45e5b1c33e26f85F1);
+        // console.log("convMock", address(conv));
 
         DSPC dspc = new DSPC(JUG, address(0), address(0), address(conv));
         console.log("dspc", address(dspc));
@@ -40,23 +40,23 @@ contract DSPCDeployScriptToSepolia is Script {
         dspc.file("tau", 1 hours);
 
         dspc.file(bytes32("ETH-A"), "max", uint256(30000));
-        dspc.file(bytes32("ETH-A"), "min", uint256(1));
+        dspc.file(bytes32("ETH-A"), "min", uint256(0));
         dspc.file(bytes32("ETH-A"), "step", uint256(100));
 
         dspc.file(bytes32("ETH-B"), "max", uint256(30000));
-        dspc.file(bytes32("ETH-B"), "min", uint256(1));
+        dspc.file(bytes32("ETH-B"), "min", uint256(0));
         dspc.file(bytes32("ETH-B"), "step", uint256(100));
 
         dspc.file(bytes32("ETH-C"), "max", uint256(30000));
-        dspc.file(bytes32("ETH-C"), "min", uint256(1));
+        dspc.file(bytes32("ETH-C"), "min", uint256(0));
         dspc.file(bytes32("ETH-C"), "step", uint256(100));
 
         // Authorize bud
         dspc.kiss(SENDER);
 
         // Try changing a rate
-        uint256 ethATarget = 20;
-        uint256 ethBTarget = 50;
+        uint256 ethBTarget = 20;
+        uint256 ethATarget = 50;
         uint256 ethCTarget = 100;
 
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](3);
