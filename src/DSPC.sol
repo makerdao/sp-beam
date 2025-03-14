@@ -253,7 +253,7 @@ contract DSPC {
     }
 
     /// @notice Execute a batch of rate updates
-    /// @param updates Array of rate changes to apply, must be ordered by id (DSR < ilks < SSR)
+    /// @param updates Array of rate changes to apply, must be ordered alphabetically by id
     /// @dev Executes multiple rate updates in a single transaction with safety checks:
     ///      1. Verifies cooldown period has elapsed
     ///      2. Checks each rate is configured and within bounds
