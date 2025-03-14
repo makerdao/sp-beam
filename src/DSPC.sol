@@ -39,24 +39,32 @@ interface ConvLike {
     function rtob(uint256 ray) external pure returns (uint256 bps);
 }
 
-/// @title Direct Stability Parameters Change Module
-/// @notice A module that allows direct changes to stability parameters with constraints
-/// @dev This contract manages stability parameters for ilks, DSR, and SSR with configurable limits
+/// @title Direct Stability Parameters Change Module (DSPC)
+/// @notice A module for managing protocol stability parameters with configurable constraints and safety checks
+/// @dev Provides controlled access to modify stability parameters (ilk stability fees, DSR, SSR) with:
+///      - Configurable min/max bounds and step sizes for each parameter
+///      - Cooldown periods between updates
+///      - Ordered batch updates
+///      - Emergency circuit breaker
 /// @custom:authors [Oddaf]
 /// @custom:reviewers []
 /// @custom:auditors []
 /// @custom:bounties []
 contract DSPC {
     // --- Structs ---
+    /// @notice Configuration for a rate parameter's constraints
+    /// @dev All values are in basis points (1 bp = 0.01%)
     struct Cfg {
-        uint16 min; // Minimum rate in basis points
-        uint16 max; // Maximum rate in basis points
-        uint16 step; // Maximum rate change in basis points
+        uint16 min; // Minimum allowed rate
+        uint16 max; // Maximum allowed rate
+        uint16 step; // Maximum allowed rate change per update
     }
 
+    /// @notice A rate parameter update request
+    /// @dev Used in batch updates to modify multiple rates atomically
     struct ParamChange {
-        bytes32 id; // Identifier (ilk | "DSR" | "SSR")
-        uint256 bps; // New rate in basis points
+        bytes32 id; // Rate identifier (ilk, "DSR", or "SSR")
+        uint256 bps; // New rate value in bps
     }
 
     // --- Immutables ---
@@ -111,16 +119,16 @@ contract DSPC {
      */
     event File(bytes32 indexed what, uint256 data);
     /**
-     * @notice A Ilk/DSR/SSR parameter was updated.
-     * @param id The Ilk/DSR/SSR identifier.
+     * @notice A parameter was updated for an ilk, DSR, SSR.
+     * @param id The identifier (ilk, DSR, or SSR).
      * @param what The changed parameter name.
      * @param data The new value of the parameter.
      */
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
     /**
      * @notice Rate change was executed.
-     * @param id The Ilk/DSR/SSR identifier.
-     * @param bps The new value of the rate in basis points.
+     * @param id The identifier (ilk, DSR, or SSR).
+     * @param bps The new rate in basis points.
      */
     event Set(bytes32 indexed id, uint256 bps);
 
@@ -140,11 +148,11 @@ contract DSPC {
         _;
     }
 
-    /// @notice Constructor sets the core contracts
-    /// @param _jug The Jug contract for managing stability fees
-    /// @param _pot The Pot contract for managing DSR
-    /// @param _susds The SUSDS contract for managing SSR
-    /// @param _conv The conversion utility contract for rate calculations
+    /// @notice Initialize the DSPC module with core system contracts
+    /// @param _jug Jug contract for stability fee management
+    /// @param _pot Pot contract for Dai Savings Rate (DSR)
+    /// @param _susds SUSDS contract for Sky Savings Rate (SSR)
+    /// @param _conv Utility contract for rate conversions between basis points and ray
     constructor(address _jug, address _pot, address _susds, address _conv) {
         jug = JugLike(_jug);
         pot = PotLike(_pot);
@@ -188,10 +196,13 @@ contract DSPC {
         emit Diss(usr);
     }
 
-    /// @notice Configure module parameters
-    /// @param what The parameter to configure ("bad" or "tau")
-    /// @param data The value to set
-    /// @dev Emits File event after successful configuration
+    /// @notice Configure global module parameters
+    /// @param what Parameter name ("bad": circuit breaker, "tau": cooldown period, "toc": last update timestamp)
+    /// @param data New parameter value
+    /// @dev Configures critical module parameters:
+    ///      - bad: Emergency circuit breaker (0: normal, 1: halted)
+    ///      - tau: Minimum time between rate updates in seconds
+    ///      - toc: Last update timestamp (set automatically)
     function file(bytes32 what, uint256 data) external auth {
         if (what == "bad") {
             require(data == 0 || data == 1, "DSPC/invalid-bad-value");
@@ -209,12 +220,17 @@ contract DSPC {
         emit File(what, data);
     }
 
-    /// @notice Configure constraints for a rate
-    /// @param id The rate identifier (ilk name, "DSR", or "SSR")
-    /// @param what The parameter to configure ("min", "max" or "step")
-    /// @param data The value to set
-    /// @dev Emits File event after successful configuration
-    /// @dev Note that ordering may be relevant if setting min and max in the same transaction, as the transaction may revert if the new max is lower than the old min (or vice versa).
+    /// @notice Configure constraints for a specific rate parameter
+    /// @param id Rate identifier (ilk for collateral types, "DSR" for Dai Savings Rate, "SSR" for Sky Savings Rate)
+    /// @param what Parameter to configure:
+    ///      - "min": Minimum allowed rate in basis points
+    ///      - "max": Maximum allowed rate in basis points
+    ///      - "step": Maximum allowed rate change in basis points
+    /// @param data New parameter value in basis points
+    /// @dev Important considerations:
+    ///      - For ilks, verifies the collateral type is initialized in the system
+    ///      - All values must be <= uint16 max (65535 basis points)
+    ///      - When setting both min and max, set min first to avoid invalid state
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
         if (id != "DSR" && id != "SSR") {
             (uint256 duty,) = jug.ilks(id);
@@ -236,19 +252,24 @@ contract DSPC {
         emit File(id, what, data);
     }
 
-    /// @notice Apply rate updates
-    /// @param updates Array of rate updates to apply (strictly ordered by id)
-    /// @dev Each update is validated against configured constraints before being applied
-    /// @dev Emits Set event for each update.
+    /// @notice Execute a batch of rate updates
+    /// @param updates Array of rate changes to apply, must be ordered by id (DSR < ilks < SSR)
+    /// @dev Executes multiple rate updates in a single transaction with safety checks:
+    ///      1. Verifies cooldown period has elapsed
+    ///      2. Checks each rate is configured and within bounds
+    ///      3. Validates rate changes don't exceed max step size
+    ///      4. Ensures updates are properly ordered to prevent duplicates
+    ///      5. Calls drip() before each update to accrue fees
     /// @dev Reverts if:
-    ///      - Empty updates array
-    ///      - Cooldown not expired
-    ///      - Ilks out of order
-    ///      - Rate (ilk) not configured
-    ///      - Rate below configured minimum
-    ///      - Rate above configured maximum
-    ///      - Current system rate out of bounds (not between configured minimum and maximum)
-    ///      - Rate change above configured step
+    ///      - Empty updates array (DSPC/empty-batch)
+    ///      - Cooldown period not elapsed (DSPC/too-early)
+    ///      - Rate not configured, step = 0 (DSPC/rate-not-configured)
+    ///      - New rate < min (DSPC/below-min)
+    ///      - New rate > max (DSPC/above-max)
+    ///      - Rate change > step (DSPC/delta-above-step)
+    ///      - Updates not ordered by id (DSPC/updates-out-of-order)
+    ///      - Current rate outside bounds (DSPC/rate-out-of-bounds)
+    ///      - Module halted, bad = 1 (DSPC/module-halted)
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
         require(block.timestamp >= tau + toc, "DSPC/too-early");

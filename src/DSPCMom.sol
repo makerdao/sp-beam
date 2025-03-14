@@ -24,20 +24,28 @@ interface DSPCLike {
     function file(bytes32 what, uint256 data) external;
 }
 
-/// @title DSPC Mom - Emergency shutdown for DSPC
-/// @notice A contract that can halt the DSPC module in case of emergency
+/// @title DSPC Mom - Shutdown DSPC bypassing GSM delay.
+/// @notice Governance contract for halting DSPC module operations
+/// @dev Provides:
+///      - Owner/authority-based access control
+///      - Emergency halt without delay
 /// @custom:authors [Oddaf]
 /// @custom:reviewers []
 /// @custom:auditors []
 /// @custom:bounties []
 contract DSPCMom {
     // --- Auth ---
-    address public owner; // Owner address
-    address public authority; // Authorization contract
+    /// @notice Owner with full admin rights
+    address public owner;
+    /// @notice Optional authority contract for additional access control
+    address public authority;
 
     // --- Events ---
+    /// @notice Owner address changed
     event SetOwner(address indexed owner);
+    /// @notice Authority contract changed
     event SetAuthority(address indexed authority);
+    /// @notice DSPC module halted
     event Halt(address indexed dspc);
 
     // --- Modifiers ---
@@ -51,32 +59,32 @@ contract DSPCMom {
         _;
     }
 
-    /// @notice Constructor sets initial owner
+    /// @notice Initialize contract with msg.sender as owner
     constructor() {
         owner = msg.sender;
         emit SetOwner(msg.sender);
     }
 
     // --- Administration ---
-    /// @notice Set a new owner
-    /// @param owner_ The new owner address
+    /// @notice Transfer ownership to a new address
+    /// @param owner_ New owner address with full admin rights
     function setOwner(address owner_) external onlyOwner {
         owner = owner_;
         emit SetOwner(owner_);
     }
 
-    /// @notice Set the authority contract
-    /// @param authority_ The new authority contract
+    /// @notice Set authority contract for additional access control
+    /// @param authority_ New authority contract address (0x0 to disable)
     function setAuthority(address authority_) external onlyOwner {
         authority = authority_;
         emit SetAuthority(authority_);
     }
 
     // --- Internal Functions ---
-    /// @notice Check if an address is authorized to call a function
-    /// @param src The source address making the call
-    /// @param sig The function signature being called
-    /// @return Whether the address is authorized
+    /// @notice Check caller authorization
+    /// @param src Caller address
+    /// @param sig Function signature
+    /// @return True if authorized (owner, self, or approved by authority)
     function isAuthorized(address src, bytes4 sig) internal view returns (bool) {
         if (src == owner || src == address(this)) {
             return true;
@@ -88,8 +96,9 @@ contract DSPCMom {
     }
 
     // --- Emergency Actions ---
-    /// @notice Halt the DSPC module without enforcing the GSM delay
-    /// @param dspc The DSPC contract to halt
+    /// @notice Emergency halt of DSPC module
+    /// @param dspc Target DSPC contract
+    /// @dev Sets bad=1 to immediately halt operations
     function halt(address dspc) external auth {
         DSPCLike(dspc).file("bad", 1);
         emit Halt(dspc);
