@@ -110,42 +110,47 @@ contract DSPCMomIntegrationTest is DssTest {
         assertEq(mom.owner(), address(pauseProxy));
     }
 
+    function test_only_owner_methods() public {
+        checkModifier(address(mom), "DSPCMom/not-owner", [DSPCMom.setOwner.selector, DSPCMom.setAuthority.selector]);
+    }
+
+    function test_auth_methods() public {
+        checkModifier(address(mom), "DSPCMom/not-authorized", [DSPCMom.halt.selector]);
+
+        vm.prank(address(pauseProxy));
+        mom.setAuthority(address(0));
+        checkModifier(address(mom), "DSPCMom/not-authorized", [DSPCMom.halt.selector]);
+    }
+
     function test_setOwner() public {
         vm.prank(address(pauseProxy));
+        vm.expectEmit(true, true, true, true);
+        emit SetOwner(address(0x1234));
         mom.setOwner(address(0x1234));
         assertEq(mom.owner(), address(0x1234));
     }
 
-    function test_setOwner_unauthorized() public {
-        vm.expectRevert("DSPCMom/not-owner");
-        mom.setOwner(address(0x123));
-    }
-
     function test_setAuthority() public {
         vm.prank(address(pauseProxy));
+        vm.expectEmit(true, true, true, true);
+        emit SetAuthority(address(0x123));
         mom.setAuthority(address(0x123));
         assertEq(address(mom.authority()), address(0x123));
     }
 
-    function test_setAuthority_unauthorized() public {
-        vm.expectRevert("DSPCMom/not-owner");
-        mom.setAuthority(address(0x123));
-    }
-
-    function test_halt_unauthorized() public {
-        vm.expectRevert("DSPCMom/not-authorized");
+    function check_halt(address who) internal {
+        vm.prank(who);
+        vm.expectEmit(true, true, true, true);
+        emit Halt(address(dspc));
         mom.halt(address(dspc));
+        assertEq(dspc.bad(), 1);
     }
 
     function test_halt_owner() public {
-        vm.prank(address(pauseProxy));
-        mom.halt(address(dspc));
-        assertEq(dspc.bad(), 1);
+        check_halt(address(pauseProxy));
     }
 
     function test_halt_hat() public {
-        vm.prank(chief.hat());
-        mom.halt(address(dspc));
-        assertEq(dspc.bad(), 1);
+        check_halt(chief.hat());
     }
 }

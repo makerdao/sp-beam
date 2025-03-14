@@ -63,7 +63,7 @@ contract DSPCTest is DssTest {
     event Kiss(address indexed usr);
     event Diss(address indexed usr);
     event File(bytes32 indexed id, bytes32 indexed what, uint256 data);
-    event Set(DSPC.ParamChange[] updates);
+    event Set(bytes32 indexed id, uint256 bps);
 
     function setUp() public {
         vm.createSelectFork("mainnet");
@@ -146,9 +146,54 @@ contract DSPCTest is DssTest {
         checkAuth(address(dspc), "DSPC");
     }
 
+    function test_auth_methods() public {
+        checkModifier(
+            address(dspc),
+            "DSPC/not-authorized",
+            [DSPC.kiss.selector, DSPC.diss.selector, DSPC.rely.selector, DSPC.deny.selector]
+        );
+    }
+
+    function test_toll_methods() public {
+        checkModifier(address(dspc), "DSPC/not-facilitator", [DSPC.set.selector]);
+    }
+
+    function test_good_methods() public {
+        vm.startPrank(address(pauseProxy));
+        dspc.file("bad", 1);
+        dspc.kiss(address(this));
+        vm.stopPrank();
+
+        checkModifier(address(dspc), "DSPC/module-halted", [DSPC.set.selector]);
+    }
+
+    function test_kiss() public {
+        address who = address(0x0ddaf);
+        assertEq(dspc.buds(who), 0);
+
+        vm.prank(address(pauseProxy));
+        vm.expectEmit(true, true, true, true);
+        emit Kiss(who);
+        dspc.kiss(who);
+        assertEq(dspc.buds(who), 1);
+    }
+
+    function test_diss() public {
+        address who = address(0x0ddaf);
+        vm.prank(address(pauseProxy));
+        dspc.kiss(who);
+        assertEq(dspc.buds(who), 1);
+
+        vm.prank(address(pauseProxy));
+        vm.expectEmit(true, true, true, true);
+        emit Diss(who);
+        dspc.diss(who);
+        assertEq(dspc.buds(who), 0);
+    }
+
     function test_file() public {
         checkFileUint(address(dspc), "DSPC", ["bad", "tau", "toc"]);
-        
+
         vm.startPrank(address(pauseProxy));
 
         vm.expectRevert("DSPC/invalid-bad-value");
@@ -161,6 +206,9 @@ contract DSPCTest is DssTest {
         dspc.file("toc", uint256(type(uint128).max) + 1);
 
         vm.stopPrank();
+
+        vm.expectRevert("DSPC/not-authorized");
+        dspc.file("bad", 1);
     }
 
     function test_file_ilk() public {
@@ -170,6 +218,9 @@ contract DSPCTest is DssTest {
         assertEq(step, 100);
 
         vm.startPrank(address(pauseProxy));
+
+        vm.expectEmit(true, true, true, true);
+        emit File(ILK, "min", 100);
         dspc.file(ILK, "min", 100);
         dspc.file(ILK, "max", 3000);
         dspc.file(ILK, "step", 420);
@@ -202,6 +253,9 @@ contract DSPCTest is DssTest {
         dspc.file("MOG-A", "min", 100);
 
         vm.stopPrank();
+
+        vm.expectRevert("DSPC/not-authorized");
+        dspc.file(ILK, "min", 100);
     }
 
     function test_set_ilk() public {
@@ -238,6 +292,9 @@ contract DSPCTest is DssTest {
         updates[0] = DSPC.ParamChange(SSR, target);
 
         vm.prank(bud);
+
+        vm.expectEmit(true, true, true, true);
+        emit Set(SSR, target);
         dspc.set(updates);
 
         assertEq(susds.ssr(), conv.btor(target));
@@ -368,4 +425,3 @@ contract DSPCTest is DssTest {
         dspc.set(updates);
     }
 }
-
