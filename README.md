@@ -1,6 +1,6 @@
 # Direct Stability Parameters Change Module (DSPC)
 
-A module for MakerDAO that enables direct changes to stability parameters (duty, dsr, ssr) through a simple, secure interface with proper constraints and timelocks.
+A module for the Sky Protocol that enables direct changes to stability parameters (duty, dsr, ssr) through a simple, secure interface with proper constraints and timelocks.
 
 ## Overview
 
@@ -69,8 +69,8 @@ dspc.kiss(facilitatorAddress);
 4. Execute a batch of rate changes:
 ```solidity
 DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
-updates[0] = DSPC.ParamChange("ETH-A", 150);  // Set ETH-A rate to 1.5%
-updates[1] = DSPC.ParamChange("DSR", 75);     // Set DSR to 0.75%
+updates[0] = DSPC.ParamChange("DSR", 75);     // Set DSR to 0.75%
+updates[1] = DSPC.ParamChange("ETH-A", 150);  // Set ETH-A rate to 1.5%
 dspc.set(updates);
 ```
 
