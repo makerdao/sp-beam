@@ -261,15 +261,16 @@ contract DSPC {
     ///      4. Ensures updates are properly ordered to prevent duplicates
     ///      5. Calls drip() before each update to accrue fees
     /// @dev Reverts if:
+    ///      - Caller not authorized (DSPC/not-facilitator)
+    ///      - Module halted, bad = 1 (DSPC/module-halted)    
     ///      - Empty updates array (DSPC/empty-batch)
     ///      - Cooldown period not elapsed (DSPC/too-early)
+    ///      - Updates not ordered alphabetically by id (DSPC/updates-out-of-order)    
     ///      - Rate not configured, step = 0 (DSPC/rate-not-configured)
     ///      - New rate < min (DSPC/below-min)
     ///      - New rate > max (DSPC/above-max)
-    ///      - Rate change > step (DSPC/delta-above-step)
-    ///      - Updates not ordered by id (DSPC/updates-out-of-order)
     ///      - Current rate outside bounds (DSPC/rate-out-of-bounds)
-    ///      - Module halted, bad = 1 (DSPC/module-halted)
+    ///      - Rate change > step (DSPC/delta-above-step)
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
         require(block.timestamp >= tau + toc, "DSPC/too-early");
