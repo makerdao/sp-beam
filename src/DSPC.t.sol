@@ -147,11 +147,7 @@ contract DSPCTest is DssTest {
     }
 
     function test_auth_methods() public {
-        checkModifier(
-            address(dspc),
-            "DSPC/not-authorized",
-            [DSPC.kiss.selector, DSPC.diss.selector, DSPC.rely.selector, DSPC.deny.selector]
-        );
+        checkModifier(address(dspc), "DSPC/not-authorized", [DSPC.kiss.selector, DSPC.diss.selector]);
     }
 
     function test_toll_methods() public {
