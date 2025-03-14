@@ -53,10 +53,12 @@ dspc.file("tau", 1 days);
 // Configure constraints for a collateral type
 dspc.file("ETH-A", "min", 1);     // Min rate: 0.01%
 dspc.file("ETH-A", "max", 1000);  // Max rate: 10%
+dspc.file("ETH-A", "step", 100);  // Max change: 1%
 
 // Configure constraints for DSR
 dspc.file("DSR", "min", 1);    // Min rate: 0.01%
 dspc.file("DSR", "max", 800);  // Max rate: 8%
+dspc.file("DSR", "step", 100);  // Max change: 1%
 ```
 
 3. Add facilitators who can propose and execute rate changes:
