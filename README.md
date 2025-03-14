@@ -1,6 +1,6 @@
 # Direct Stability Parameters Change Module (DSPC)
 
-A module for MakerDAO that enables direct changes to stability parameters (duty, dsr, ssr) through a simple, secure interface with proper constraints and timelocks.
+A module for the Sky Protocol that enables direct changes to stability parameters (duty, dsr, ssr) through a simple, secure interface with proper constraints and timelocks.
 
 ## Overview
 
