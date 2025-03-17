@@ -67,6 +67,9 @@ contract DSPC {
         uint256 bps; // New rate value in bps
     }
 
+    // --- Constants ---
+    uint256 public constant RAY = 10**27;
+
     // --- Immutables ---
     /// @notice Stability fee rates
     JugLike public immutable jug;
@@ -271,6 +274,7 @@ contract DSPC {
     ///      - New rate > max (DSPC/above-max)
     ///      - Current rate outside bounds (DSPC/rate-out-of-bounds)
     ///      - Rate change > step (DSPC/delta-above-step)
+    ///      - Rate conversion failed (DSPC/invalid-rate-conv)
     function set(ParamChange[] calldata updates) external toll good {
         require(updates.length > 0, "DSPC/empty-batch");
         require(block.timestamp >= tau + toc, "DSPC/too-early");

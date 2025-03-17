@@ -43,6 +43,12 @@ contract InitCaller {
     }
 }
 
+contract MockBrokenConv is ConvMock {
+    function btor(uint256 /* bps */) public view override returns (uint256) {
+        return 0;
+    }
+}
+
 contract DSPCTest is DssTest {
     address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
@@ -420,4 +426,19 @@ contract DSPCTest is DssTest {
         vm.prank(bud);
         dspc.set(updates);
     }
+
+    function test_revert_set_malfunctioning_conv() public {
+        bytes memory code = address(new MockBrokenConv()).code;
+        vm.etch(address(conv), code);
+
+        (uint256 duty,) = dss.jug.ilks(ILK);
+        uint256 target = conv.rtob(duty) + 50;
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(ILK, target);
+
+        vm.expectRevert("DSPC/invalid-rate-conv");
+        vm.prank(bud);
+        dspc.set(updates);
+    }    
 }
