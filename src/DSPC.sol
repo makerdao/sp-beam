@@ -309,6 +309,7 @@ contract DSPC {
 
             // Execute the update
             uint256 ray = conv.btor(bps);
+            require(ray >= RAY, "DSPC/invalid-rate-conv");
             if (id == "DSR") {
                 pot.drip();
                 pot.file("dsr", ray);
