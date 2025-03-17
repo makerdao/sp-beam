@@ -68,7 +68,7 @@ contract DSPC {
     }
 
     // --- Constants ---
-    uint256 public constant RAY = 10**27;
+    uint256 public constant RAY = 10 ** 27;
 
     // --- Immutables ---
     /// @notice Stability fee rates

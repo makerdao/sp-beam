@@ -44,7 +44,7 @@ contract InitCaller {
 }
 
 contract MockBrokenConv is ConvMock {
-    function btor(uint256 /* bps */) public view override returns (uint256) {
+    function btor(uint256 /* bps */ ) public view override returns (uint256) {
         return 0;
     }
 }
@@ -440,5 +440,5 @@ contract DSPCTest is DssTest {
         vm.expectRevert("DSPC/invalid-rate-conv");
         vm.prank(bud);
         dspc.set(updates);
-    }    
+    }
 }
