@@ -272,7 +272,6 @@ contract DSPC {
     ///      - Rate not configured, step = 0 (DSPC/rate-not-configured)
     ///      - New rate < min (DSPC/below-min)
     ///      - New rate > max (DSPC/above-max)
-    ///      - Current rate outside bounds (DSPC/rate-out-of-bounds)
     ///      - Rate change > step (DSPC/delta-above-step)
     ///      - Rate conversion failed (DSPC/invalid-rate-conv)
     function set(ParamChange[] calldata updates) external toll good {
@@ -305,7 +304,11 @@ contract DSPC {
                 oldBps = conv.rtob(duty);
             }
 
-            require(oldBps >= cfg.min && oldBps <= cfg.max, "DSPC/rate-out-of-bounds");
+            if (oldBps < cfg.min) {
+                oldBps = cfg.min;
+            } else if (oldBps > cfg.max) {
+                oldBps = cfg.max;
+            }
 
             // Calculates absolute difference between the old and the new rate
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;

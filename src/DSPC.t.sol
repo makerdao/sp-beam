@@ -44,7 +44,7 @@ contract InitCaller {
 }
 
 contract MockBrokenConv is ConvMock {
-    function btor(uint256 /* bps */ ) public view override returns (uint256) {
+    function btor(uint256 /* bps */ ) public pure override returns (uint256) {
         return 0;
     }
 }
@@ -322,6 +322,22 @@ contract DSPCTest is DssTest {
         assertEq(susds.ssr(), conv.btor(ssrTarget));
     }
 
+    function test_set_rate_outside_range() public {
+        dss.jug.drip(ILK);
+        uint256 rate = conv.btor(3050);
+        vm.prank(address(pauseProxy));
+        dss.jug.file(ILK, "duty", rate); // outside range
+
+        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
+        updates[0] = DSPC.ParamChange(ILK, 2999);
+
+        vm.prank(bud);
+        dspc.set(updates);
+
+        (uint256 duty,) = dss.jug.ilks(ILK);
+        assertEq(duty, conv.btor(2999));
+    }
+
     function test_revert_set_duplicate() public {
         (uint256 duty,) = dss.jug.ilks(ILK);
 
@@ -410,20 +426,6 @@ contract DSPCTest is DssTest {
         updates[0] = DSPC.ParamChange(DSR, currentDSR + 2);
         vm.prank(bud);
         vm.expectRevert("DSPC/too-early");
-        dspc.set(updates);
-    }
-
-    function test_revert_set_rate_outside_range() public {
-        dss.jug.drip(ILK);
-        uint256 rate = conv.btor(3050);
-        vm.prank(address(pauseProxy));
-        dss.jug.file(ILK, "duty", rate); // outside range but within step
-
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 2999);
-
-        vm.expectRevert("DSPC/rate-out-of-bounds");
-        vm.prank(bud);
         dspc.set(updates);
     }
 
