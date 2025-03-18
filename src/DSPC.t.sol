@@ -323,10 +323,10 @@ contract DSPCTest is DssTest {
     }
 
     function test_set_rate_outside_range() public {
+        // rate above max
         dss.jug.drip(ILK);
-        uint256 rate = conv.btor(3050);
         vm.prank(address(pauseProxy));
-        dss.jug.file(ILK, "duty", rate); // outside range
+        dss.jug.file(ILK, "duty", conv.btor(3050)); // outside range
 
         DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
         updates[0] = DSPC.ParamChange(ILK, 2999);
@@ -336,6 +336,19 @@ contract DSPCTest is DssTest {
 
         (uint256 duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(2999));
+
+        // rate below min
+        dss.jug.drip(ILK);
+        vm.prank(address(pauseProxy));
+        dss.jug.file(ILK, "duty",  conv.btor(0)); // outside range
+
+        updates[0] = DSPC.ParamChange(ILK, 50);
+
+        vm.prank(bud);
+        dspc.set(updates);
+
+        (duty,) = dss.jug.ilks(ILK);
+        assertEq(duty, conv.btor(50));
     }
 
     function test_revert_set_duplicate() public {
