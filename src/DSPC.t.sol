@@ -340,7 +340,7 @@ contract DSPCTest is DssTest {
         // rate below min
         dss.jug.drip(ILK);
         vm.prank(address(pauseProxy));
-        dss.jug.file(ILK, "duty",  conv.btor(0)); // outside range
+        dss.jug.file(ILK, "duty", conv.btor(0)); // outside range
 
         updates[0] = DSPC.ParamChange(ILK, 50);
 
