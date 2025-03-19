@@ -29,10 +29,6 @@ interface DSPCLike {
 /// @dev Provides:
 ///      - Owner/authority-based access control
 ///      - Emergency halt without delay
-/// @custom:authors [Oddaf]
-/// @custom:reviewers []
-/// @custom:auditors []
-/// @custom:bounties []
 contract DSPCMom {
     // --- Auth ---
     /// @notice Owner with full admin rights

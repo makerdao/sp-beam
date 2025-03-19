@@ -46,10 +46,6 @@ interface ConvLike {
 ///      - Cooldown periods between updates
 ///      - Ordered batch updates
 ///      - Emergency circuit breaker
-/// @custom:authors [Oddaf]
-/// @custom:reviewers []
-/// @custom:auditors []
-/// @custom:bounties []
 contract DSPC {
     // --- Structs ---
     /// @notice Configuration for a rate parameter's constraints
