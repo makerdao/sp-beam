@@ -8,15 +8,17 @@ using SUsds as susdsImp;
 using Vat as vat;
 
 methods {
-    function wards(address) external returns (uint256) envfree;
+    function RAY() external returns (uint256) envfree;
+    function bad() external returns (uint8) envfree;
     function buds(address) external returns (uint256) envfree;
     function cfgs(bytes32) external returns (uint16, uint16, uint16) envfree;
-    function bad() external returns (uint8) envfree;
     function tau() external returns (uint64) envfree;
     function toc() external returns (uint128) envfree;
+    function wards(address) external returns (uint256) envfree;
 
     function conv.rtob(uint256) external returns (uint256) envfree;
     function conv.btor(uint256) external returns (uint256) envfree;
+    function conv.MAX_BPS_IN() external returns (uint256) envfree;
 
     function jug.ilks(bytes32) external returns (uint256, uint256) envfree;
 
@@ -43,7 +45,7 @@ definition SSR() returns bytes32 = to_bytes32(0x53535200000000000000000000000000
 definition DSR() returns bytes32 = to_bytes32(0x4453520000000000000000000000000000000000000000000000000000000000);
 
 // Verify that each storage variable is only modified in the expected functions
-rule storageAffected(method f) {
+rule storage_affected(method f) {
     env e;
     address anyAddr;
     bytes32 anyId;
@@ -67,14 +69,15 @@ rule storageAffected(method f) {
     mathint tauAfter = tau();
     mathint tocAfter = toc();
 
+
     assert wardsAfter != wardsBefore => f.selector == sig:rely(address).selector || f.selector == sig:deny(address).selector, "wards[x] changed in an unexpected function";
     assert budsAfter != budsBefore => f.selector == sig:kiss(address).selector || f.selector == sig:diss(address).selector, "buds[x] changed in an unexpected function";
     assert minAfter != minBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "min[x] changed in an unexpected function";
     assert maxAfter != maxBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "max[x] changed in an unexpected function";
     assert stepAfter != stepBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "step[x] changed in an unexpected function";
     assert badAfter != badBefore => f.selector == sig:file(bytes32, uint256).selector, "bad[x] changed in an unexpected function";
-    assert tauAfter != tauBefore => f.selector == sig:file(bytes32, uint256).selector, "tau[x] changed in an unexpected function";
-    assert tocAfter != tocBefore => f.selector == sig:file(bytes32, uint256).selector || f.selector == sig:set(DSPC.ParamChange[] calldata).selector, "toc[x] changed in an unexpected function";
+    assert tauAfter != tauBefore => f.selector == sig:file(bytes32, uint256).selector, "tau changed in an unexpected function";
+    assert tocAfter != tocBefore => f.selector == sig:file(bytes32, uint256).selector || f.selector == sig:set(bytes32, uint256).selector, "toc changed in an unexpected function";
 }
 
 // Verify that the correct storage changes for non-reverting rely
@@ -101,10 +104,11 @@ rule rely_revert(address usr) {
 
     mathint wardsSender = wards(e.msg.sender);
 
-    rely@withrevert(e, usr);
-
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
+
+    rely@withrevert(e, usr);
+
     assert lastReverted <=> revert1 || revert2, "rely revert rules failed";
 }
 
@@ -132,10 +136,11 @@ rule deny_revert(address usr) {
 
     mathint wardsSender = wards(e.msg.sender);
 
-    deny@withrevert(e, usr);
-
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
+
+    deny@withrevert(e, usr);
+
     assert lastReverted <=> revert1 || revert2, "deny revert rules failed";
 }
 
@@ -163,10 +168,10 @@ rule kiss_revert(address usr) {
 
     mathint wardsSender = wards(e.msg.sender);
 
-    kiss@withrevert(e, usr);
-
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
+
+    kiss@withrevert(e, usr);
 
     assert lastReverted <=> revert1 || revert2, "kiss revert rules failed";
 }
@@ -231,14 +236,14 @@ rule file_global_revert(bytes32 what, uint256 data) {
 
     mathint wardsSender = wards(e.msg.sender);
 
-    file@withrevert(e, what, data);
-
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
     bool revert3 = what != BAD() && what != TAU() && what != TOC();
     bool revert4 = what == BAD() && to_mathint(data) != 0 && to_mathint(data) != 1;
     bool revert5 = what == TAU() && to_mathint(data) > max_uint64;
     bool revert6 = what == TOC() && to_mathint(data) > max_uint128;
+
+    file@withrevert(e, what, data);
 
     assert lastReverted <=> revert1 || revert2 || revert3 ||
                             revert4 || revert5 || revert6,
@@ -275,20 +280,97 @@ rule file_per_id_revert(bytes32 id, bytes32 what, uint256 data) {
     mathint duty; mathint _rate;
     duty, _rate = jug.ilks(id);
 
-    file@withrevert(e, id, what, data);
-
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
     bool revert3 = id != DSR() && id != SSR() && duty == 0;
     bool revert4 = what != MIN() && what != MAX() && what != STEP();
-    bool revert5 = what == MIN() && to_mathint(data) > max_uint16;
-    bool revert6 = what == MAX() && to_mathint(data) > max_uint16;
-    bool revert7 = what == STEP() && to_mathint(data) > max_uint16;
-    bool revert8 = what == MIN() && to_mathint(data) > maxBefore;
-    bool revert9 = what == MAX() && to_mathint(data) < minBefore;
+    bool revert5 = to_mathint(data) > max_uint16;
+    bool revert6 = what == MIN() && to_mathint(data) > maxBefore;
+    bool revert7 = what == MAX() && to_mathint(data) < minBefore;
+
+    file@withrevert(e, id, what, data);
 
     assert lastReverted <=> revert1 || revert2 || revert3 ||
                             revert4 || revert5 || revert6 ||
-                            revert7 || revert8 || revert9,
+                            revert7,
                             "file revert rules failed";
+}
+
+// Verify correct storage changes for non-reverting set for a single rate.
+rule set_single(bytes32 id, uint256 bps) {
+    env e;
+    bytes32 ilk;
+    require ilk != DSR() && ilk != SSR();
+
+    mathint ray = conv.btor(bps);
+
+    mathint dsrBefore = pot.dsr();
+    mathint ssrBefore = susdsImp.ssr();
+    mathint dutyBefore; mathint _rho;
+    dutyBefore, _rho = jug.ilks(ilk);
+
+    set(e, id, bps);
+
+    mathint dsrAfter = pot.dsr();
+    mathint ssrAfter = susdsImp.ssr();
+    mathint dutyAfter;
+    dutyAfter, _rho = jug.ilks(ilk);
+
+    assert id == DSR() => dsrAfter == ray, "set did not set dsr";
+    assert id != DSR() => dsrAfter == dsrBefore, "set did keep unchanged dsr";
+
+    assert id == SSR() => ssrAfter == ray, "set did not set ssr";
+    assert id != SSR() => ssrAfter == ssrBefore, "set did keep unchanged ssr";
+
+    assert id == ilk => dutyAfter == ray, "set did not set duty";
+    assert id != ilk => dutyAfter == dutyBefore, "set did keep unchanged duty";
+}
+
+// Verify revert rules for set for a single rate
+rule set_single_revert(bytes32 id, uint256 bps) {
+    env e;
+
+    mathint tau = tau();
+    mathint toc = toc();
+    mathint min; mathint max; mathint step;
+    min, max, step = cfgs(id);
+
+    mathint oldBps;
+    if (id == DSR()) {
+        oldBps = conv.rtob(pot.dsr());
+    } else if (id == SSR()) {
+        oldBps = conv.rtob(susdsImp.ssr());
+    } else {
+        uint256 duty; mathint _rate;
+        duty, _rate = jug.ilks(id);
+        oldBps = conv.rtob(duty);
+    }
+
+    // We need a second variable because it's not possible to reassign variables in CVL
+    mathint actualOldBps;
+    if (oldBps < min) {
+        actualOldBps = min;
+    } else if (oldBps > max) {
+        actualOldBps = max;
+    } else {
+        actualOldBps = oldBps;
+    }
+
+    mathint delta = bps > actualOldBps ? bps - actualOldBps : actualOldBps - bps;
+    mathint ray = conv.btor(bps);
+
+    bool revert1 = e.msg.value > 0;
+    bool revert2 = e.block.timestamp < tau + toc;
+    bool revert3 = step == 0;
+    bool revert4 = to_mathint(bps) > max;
+    bool revert5 = to_mathint(bps) < min;
+    bool revert6 = delta > step;
+    bool revert7 = ray < RAY();
+
+    set@withrevert(e, id, bps);
+
+    assert lastReverted <=> revert1 || revert2 || revert3 ||
+                            revert4 || revert5 || revert6 ||
+                            revert7,
+                            "set revert rules failed";
 }
