@@ -44,6 +44,9 @@ definition STEP() returns bytes32 = to_bytes32(0x7374657000000000000000000000000
 definition SSR() returns bytes32 = to_bytes32(0x5353520000000000000000000000000000000000000000000000000000000000);
 definition DSR() returns bytes32 = to_bytes32(0x4453520000000000000000000000000000000000000000000000000000000000);
 
+// Define a ghost mapping to store converted RAY values
+ghost mapping(uint256 => uint256) bpsToRay;
+
 // Verify that each storage variable is only modified in the expected functions
 rule storage_affected(method f) {
     env e;
@@ -296,34 +299,50 @@ rule file_per_id_revert(bytes32 id, bytes32 what, uint256 data) {
                             "file revert rules failed";
 }
 
-// Verify correct storage changes for non-reverting set for a single rate.
-rule set_single(bytes32 id, uint256 bps) {
+// Verify correct storage changes for non-reverting set
+rule set(DSPC.ParamChange[] updates) {
     env e;
     bytes32 ilk;
     require ilk != DSR() && ilk != SSR();
-
-    mathint ray = conv.btor(bps);
+    require updates.length <= 3 && updates.length > 0;
 
     mathint dsrBefore = pot.dsr();
     mathint ssrBefore = susdsImp.ssr();
     mathint dutyBefore; mathint _rho;
     dutyBefore, _rho = jug.ilks(ilk);
 
-    set(e, id, bps);
+    set(e, updates);
 
     mathint dsrAfter = pot.dsr();
     mathint ssrAfter = susdsImp.ssr();
     mathint dutyAfter;
     dutyAfter, _rho = jug.ilks(ilk);
 
-    assert id == DSR() => dsrAfter == ray, "set did not set dsr";
-    assert id != DSR() => dsrAfter == dsrBefore, "set did keep unchanged dsr";
+    // Manually convert all BPS values to RAY after the function call
+    // Store in the ghost mapping for use in the assertions
+    uint256 ray0 = updates.length > 0 ? conv.btor(updates[0].bps) : 0;
+    uint256 ray1 = updates.length > 1 ? conv.btor(updates[1].bps) : 0;
+    uint256 ray2 = updates.length > 2 ? conv.btor(updates[2].bps) : 0;
 
-    assert id == SSR() => ssrAfter == ray, "set did not set ssr";
-    assert id != SSR() => ssrAfter == ssrBefore, "set did keep unchanged ssr";
+    if (updates.length > 0) {
+        bpsToRay[updates[0].bps] = ray0;
+    }
+    if (updates.length > 1) {
+        bpsToRay[updates[1].bps] = ray1;
+    }
+    if (updates.length > 2) {
+        bpsToRay[updates[2].bps] = ray2;
+    }
 
-    assert id == ilk => dutyAfter == ray, "set did not set duty";
-    assert id != ilk => dutyAfter == dutyBefore, "set did keep unchanged duty";
+    // Use forall assertions with the populated ghost mapping
+    assert forall uint256 i. i < updates.length => updates[i].id == DSR() => dsrAfter == to_mathint(bpsToRay[updates[i].bps]), "set did not set dsr";
+    assert forall uint256 i. i < updates.length => updates[i].id != DSR() => dsrAfter == dsrBefore, "set did keep unchanged dsr";
+
+    assert forall uint256 i. i < updates.length => updates[i].id == SSR() => ssrAfter == to_mathint(bpsToRay[updates[i].bps]), "set did not set ssr";
+    assert forall uint256 i. i < updates.length => updates[i].id != SSR() => ssrAfter == ssrBefore, "set did keep unchanged ssr";
+
+    assert forall uint256 i. i < updates.length => updates[i].id == ilk => dutyAfter == to_mathint(bpsToRay[updates[i].bps]), "set did not set duty";
+    assert forall uint256 i. i < updates.length => updates[i].id != ilk => dutyAfter == dutyBefore, "set did keep unchanged duty";
 }
 
 // Verify revert rules for set for a single rate
