@@ -506,3 +506,77 @@ function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
         revertG  || revertH || revertI;
 
 }
+
+rule set_current_higher_than_max(DSPC.ParamChange[] updates) {
+    env e;
+
+    require updates.length == 1;
+    bytes32 id = updates[0].id;
+    uint256 bps = updates[0].bps;
+
+    bytes32 ilk;
+    require ilk != DSR() && ilk != SSR();
+
+    uint256 min; uint256 max; uint256 step;
+    min, max, step = cfgs(id);
+    require bps >= min && bps <= max;
+    bps_to_ray[bps] = conv.btor(bps);
+    bps_to_ray[max] = conv.btor(max);
+
+    uint256 dsrBefore = pot.dsr();
+    uint256 ssrBefore = susds.ssr();
+    uint256 dutyBefore; mathint _rho;
+    dutyBefore, _rho = jug.ilks(ilk);
+
+    require id == DSR() => dsrBefore > bps_to_ray[max];
+    require id == SSR() => ssrBefore > bps_to_ray[max];
+    require id != DSR() && id != SSR() => dutyBefore > bps_to_ray[max];
+
+    set(e, updates);
+
+    uint256 dsrAfter = pot.dsr();
+    uint256 ssrAfter = susds.ssr();
+    uint256 dutyAfter;
+    dutyAfter, _rho = jug.ilks(ilk);
+
+    assert id == DSR() => dsrAfter  == bps_to_ray[bps] && bps >= max - step && bps <= max, "dsr not within bounds";
+    assert id == SSR() => ssrAfter  == bps_to_ray[bps] && bps >= max - step && bps <= max, "ssr not within bounds";
+    assert id == ilk   => dutyAfter == bps_to_ray[bps] && bps >= max - step && bps <= max, "ilk duty not within bounds";
+}
+
+rule set_current_lower_than_min(DSPC.ParamChange[] updates) {
+    env e;
+
+    require updates.length == 1;
+    bytes32 id = updates[0].id;
+    uint256 bps = updates[0].bps;
+
+    bytes32 ilk;
+    require ilk != DSR() && ilk != SSR();
+
+    uint256 min; uint256 max; uint256 step;
+    min, max, step = cfgs(id);
+    require bps >= min && bps <= max;
+    bps_to_ray[bps] = conv.btor(bps);
+    bps_to_ray[min] = conv.btor(min);
+
+    uint256 dsrBefore = pot.dsr();
+    uint256 ssrBefore = susds.ssr();
+    uint256 dutyBefore; mathint _rho;
+    dutyBefore, _rho = jug.ilks(ilk);
+
+    require id == DSR() => dsrBefore < bps_to_ray[min];
+    require id == SSR() => ssrBefore < bps_to_ray[min];
+    require id != DSR() && id != SSR() => dutyBefore < bps_to_ray[min];
+
+    set(e, updates);
+
+    uint256 dsrAfter = pot.dsr();
+    uint256 ssrAfter = susds.ssr();
+    uint256 dutyAfter;
+    dutyAfter, _rho = jug.ilks(ilk);
+
+    assert id == DSR() => dsrAfter  == bps_to_ray[bps] && bps >= min && bps <= min + step, "dsr not within bounds";
+    assert id == SSR() => ssrAfter  == bps_to_ray[bps] && bps >= min && bps <= min + step, "ssr not within bounds";
+    assert id == ilk   => dutyAfter == bps_to_ray[bps] && bps >= min && bps <= min + step, "ilk duty not within bounds";
+}
