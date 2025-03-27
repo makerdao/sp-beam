@@ -952,8 +952,8 @@ contract SUsds is UUPSUpgradeable {
     mapping (address => mapping (address => uint256)) public allowance;
     mapping (address => uint256)                      public nonces;
     // Savings yield
-    uint192 public chi;   // The Rate Accumulator  [ray]
-    uint64  public rho;   // Time of last drip     [unix epoch time]
+    uint256 public chi;   // The Rate Accumulator  [ray]
+    uint256  public rho;   // Time of last drip     [unix epoch time]
     uint256 public ssr;   // The USDS Savings Rate [ray]
 
     // --- Constants ---
@@ -1016,8 +1016,8 @@ contract SUsds is UUPSUpgradeable {
     function initialize() initializer external {
         __UUPSUpgradeable_init();
 
-        chi = uint192(RAY);
-        rho = uint64(block.timestamp);
+        chi = RAY;
+        rho = block.timestamp;
         ssr = RAY;
         vat.hope(address(usdsJoin));
         wards[msg.sender] = 1;
@@ -1109,7 +1109,7 @@ contract SUsds is UUPSUpgradeable {
     function drip() public returns (uint256 nChi) {
         (uint256 chi_, uint256 rho_) = (chi, rho);
         uint256 diff = 0;
-        rho = uint64(block.timestamp);
+        rho = block.timestamp;
         emit Drip(nChi, diff);
     }
 

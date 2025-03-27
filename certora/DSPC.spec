@@ -28,7 +28,7 @@ methods {
     function pot.wards(address) external returns (uint256) envfree;
 
     function susds.ssr() external returns (uint256) envfree;
-    function susds.rho() external returns (uint64) envfree;
+    function susds.rho() external returns (uint256) envfree;
     function susds.wards(address) external returns (uint256) envfree;
 
     function vat.Line() external returns (uint256) envfree;
@@ -440,22 +440,31 @@ rule set_revert(DSPC.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss
         set_item_reverted[updates[2].id] = check_item_revert(e, updates[2].id, updates[2].bps);
     }
 
-    bool revert8 = exists uint256 i. i < updates.length => set_item_reverted[updates[i].id] == true;
+    /* bool revert8 = exists uint256 i. i < updates.length => set_item_reverted[updates[i].id] == true; */
+
+    bool revert8 = updates.length > 0 ? set_item_reverted[updates[0].id] : false;
+    bool revert9 = updates.length > 1
+        ? set_item_reverted[updates[0].id] || set_item_reverted[updates[1].id]
+        : false;
+    bool revert10 = updates.length > 2
+        ? set_item_reverted[updates[0].id] || set_item_reverted[updates[1].id] || set_item_reverted[updates[2].id]
+        : false;
 
     set@withrevert(e, updates);
 
-    assert lastReverted =>
+    assert lastReverted <=>
         revert1 || revert2 || revert3 ||
         revert4 || revert5 || revert6 ||
-        revert7 || revert8,
-        "set reverted due to unknown reason";
+        revert7 || revert8 || revert9 ||
+        revert10,
+        "set revert conditions failed";
 
-    assert
-        revert1 || revert2 || revert3 ||
-        revert4 || revert5 || revert6 ||
-        revert7 || revert8 =>
-        lastReverted,
-        "set did not revert when expected";
+    /* assert */
+    /*     revert1 || revert2 || revert3 || */
+    /*     revert4 || revert5 || revert6 || */
+    /*     revert7 || revert8 => */
+    /*     lastReverted, */
+    /*     "set did not revert when expected"; */
 }
 
 function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
