@@ -22,8 +22,8 @@ pragma solidity >=0.5.12;
 contract Vat {
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address usr) external note auth { require(live == 1, "Vat/not-live"); wards[usr] = 1; }
-    function deny(address usr) external note auth { require(live == 1, "Vat/not-live"); wards[usr] = 0; }
+    function rely(address usr) external note auth { wards[usr] = 1; }
+    function deny(address usr) external note auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Vat/not-authorized");
         _;
@@ -121,28 +121,26 @@ contract Vat {
     }
 
     // --- Administration ---
-    function init(bytes32 ilk) external note auth {
+    function init(bytes32 ilk) external note {
         require(ilks[ilk].rate == 0, "Vat/ilk-already-init");
         ilks[ilk].rate = 10 ** 27;
     }
-    function file(bytes32 what, uint data) external note auth {
-        require(live == 1, "Vat/not-live");
+    function file(bytes32 what, uint data) external note {
         if (what == "Line") Line = data;
         else revert("Vat/file-unrecognized-param");
     }
-    function file(bytes32 ilk, bytes32 what, uint data) external note auth {
-        require(live == 1, "Vat/not-live");
+    function file(bytes32 ilk, bytes32 what, uint data) external note {
         if (what == "spot") ilks[ilk].spot = data;
         else if (what == "line") ilks[ilk].line = data;
         else if (what == "dust") ilks[ilk].dust = data;
         else revert("Vat/file-unrecognized-param");
     }
-    function cage() external note auth {
+    function cage() external note {
         live = 0;
     }
 
     // --- Fungibility ---
-    function slip(bytes32 ilk, address usr, int256 wad) external note auth {
+    function slip(bytes32 ilk, address usr, int256 wad) external note {
         gem[ilk][usr] = add(gem[ilk][usr], wad);
     }
     function flux(bytes32 ilk, address src, address dst, uint256 wad) external note {
@@ -165,9 +163,6 @@ contract Vat {
 
     // --- CDP Manipulation ---
     function frob(bytes32 i, address u, address v, address w, int dink, int dart) external note {
-        // system is live
-        require(live == 1, "Vat/not-live");
-
         Urn memory urn = urns[i][u];
         Ilk memory ilk = ilks[i];
         // ilk has been initialised
@@ -228,7 +223,7 @@ contract Vat {
         require(either(vtab >= i.dust, v.art == 0), "Vat/dust-dst");
     }
     // --- CDP Confiscation ---
-    function grab(bytes32 i, address u, address v, address w, int dink, int dart) external note auth {
+    function grab(bytes32 i, address u, address v, address w, int dink, int dart) external note {
         Urn storage urn = urns[i][u];
         Ilk storage ilk = ilks[i];
 
@@ -251,7 +246,7 @@ contract Vat {
         vice   = sub(vice,   rad);
         debt   = sub(debt,   rad);
     }
-    function suck(address u, address v, uint rad) external note auth {
+    function suck(address u, address v, uint rad) external note {
         sin[u] = add(sin[u], rad);
         dai[v] = add(dai[v], rad);
         vice   = add(vice,   rad);
@@ -259,8 +254,7 @@ contract Vat {
     }
 
     // --- Rates ---
-    function fold(bytes32 i, address u, int rate) external note auth {
-        require(live == 1, "Vat/not-live");
+    function fold(bytes32 i, address u, int rate) external note {
         Ilk storage ilk = ilks[i];
         ilk.rate = add(ilk.rate, rate);
         int rad  = mul(ilk.Art, rate);

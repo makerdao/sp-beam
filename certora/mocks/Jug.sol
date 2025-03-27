@@ -130,22 +130,22 @@ contract Jug is LibNote {
     }
 
     // --- Administration ---
-    function init(bytes32 ilk) external note auth {
+    function init(bytes32 ilk) external note {
         Ilk storage i = ilks[ilk];
         require(i.duty == 0, "Jug/ilk-already-init");
         i.duty = ONE;
         i.rho  = now;
     }
-    function file(bytes32 ilk, bytes32 what, uint data) external note auth {
+    function file(bytes32 ilk, bytes32 what, uint data) external auth note {
         require(now == ilks[ilk].rho, "Jug/rho-not-updated");
         if (what == "duty") ilks[ilk].duty = data;
         else revert("Jug/file-unrecognized-param");
     }
-    function file(bytes32 what, uint data) external note auth {
+    function file(bytes32 what, uint data) external auth note {
         if (what == "base") base = data;
         else revert("Jug/file-unrecognized-param");
     }
-    function file(bytes32 what, address data) external note auth {
+    function file(bytes32 what, address data) external auth note {
         if (what == "vow") vow = data;
         else revert("Jug/file-unrecognized-param");
     }
@@ -153,9 +153,10 @@ contract Jug is LibNote {
     // --- Stability Fee Collection ---
     function drip(bytes32 ilk) external note returns (uint rate) {
         require(now >= ilks[ilk].rho, "Jug/invalid-now");
-        (, uint prev) = vat.ilks(ilk);
-        rate = rmul(rpow(add(base, ilks[ilk].duty), now - ilks[ilk].rho, ONE), prev);
-        vat.fold(ilk, vow, diff(rate, prev));
+        // (, uint prev) = vat.ilks(ilk);
+        // Note: ignoring rpow for Certora
+        // rate = rmul(rpow(add(base, ilks[ilk].duty), now - ilks[ilk].rho, ONE), prev);
+        // vat.fold(ilk, vow, diff(rate, prev));
         ilks[ilk].rho = now;
     }
 }

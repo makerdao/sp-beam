@@ -1,10 +1,10 @@
 // DSPC.spec
 
+using DSPC as dspc;
 using Conv as conv;
 using Jug as jug;
 using Pot as pot;
-using ERC1967Proxy as susds;
-using SUsds as susdsImp;
+using SUsds as susds;
 using Vat as vat;
 
 methods {
@@ -21,20 +21,31 @@ methods {
     function conv.MAX_BPS_IN() external returns (uint256) envfree;
 
     function jug.ilks(bytes32) external returns (uint256, uint256) envfree;
+    function jug.wards(address) external returns (uint256) envfree;
 
     function pot.dsr() external returns (uint256) envfree;
+    function pot.rho() external returns (uint256) envfree;
+    function pot.wards(address) external returns (uint256) envfree;
 
-    function susdsImp.ssr() external returns (uint256) envfree;
+    function susds.ssr() external returns (uint256) envfree;
+    function susds.rho() external returns (uint64) envfree;
+    function susds.wards(address) external returns (uint256) envfree;
 
-    function vat.live() external returns (uint256) envfree;
+    function vat.Line() external returns (uint256) envfree;
     function vat.can(address, address) external returns (uint256) envfree;
     function vat.dai(address) external returns (uint256) envfree;
     function vat.debt() external returns (uint256) envfree;
-    function vat.Line() external returns (uint256) envfree;
     function vat.ilks(bytes32) external returns (uint256, uint256, uint256, uint256, uint256) envfree;
+    function vat.live() external returns (uint256) envfree;
     function vat.urns(bytes32, address) external returns (uint256, uint256) envfree;
+
+    function _.ilks(bytes32) external => DISPATCHER(true);
+    function _.suck(address, address, uint256) external => DISPATCHER(true);
+    function _.fold(bytes32, address, int256) external => DISPATCHER(true);
+    function _.exit(address, uint256) external => DISPATCHER(true);
 }
 
+definition EMPTY_BYTES32() returns bytes32 = to_bytes32(0x0000000000000000000000000000000000000000000000000000000000000000);
 definition TAU() returns bytes32 = to_bytes32(0x7461750000000000000000000000000000000000000000000000000000000000);
 definition TOC() returns bytes32 = to_bytes32(0x746f630000000000000000000000000000000000000000000000000000000000);
 definition BAD() returns bytes32 = to_bytes32(0x6261640000000000000000000000000000000000000000000000000000000000);
@@ -75,9 +86,9 @@ rule storage_affected(method f) {
     assert minAfter != minBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "min[x] changed in an unexpected function";
     assert maxAfter != maxBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "max[x] changed in an unexpected function";
     assert stepAfter != stepBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "step[x] changed in an unexpected function";
-    assert badAfter != badBefore => f.selector == sig:file(bytes32, uint256).selector, "bad[x] changed in an unexpected function";
+    assert badAfter != badBefore => f.selector == sig:file(bytes32, uint256).selector, "bad changed in an unexpected function";
     assert tauAfter != tauBefore => f.selector == sig:file(bytes32, uint256).selector, "tau changed in an unexpected function";
-    assert tocAfter != tocBefore => f.selector == sig:file(bytes32, uint256).selector || f.selector == sig:set(bytes32, uint256).selector, "toc changed in an unexpected function";
+    assert tocAfter != tocBefore => f.selector == sig:file(bytes32, uint256).selector || f.selector == sig:set(DSPC.ParamChange[] calldata).selector, "toc changed in an unexpected function";
 }
 
 // Verify that the correct storage changes for non-reverting rely
@@ -245,9 +256,10 @@ rule file_global_revert(bytes32 what, uint256 data) {
 
     file@withrevert(e, what, data);
 
-    assert lastReverted <=> revert1 || revert2 || revert3 ||
-                            revert4 || revert5 || revert6,
-                            "file revert rules failed";
+    assert lastReverted <=>
+        revert1 || revert2 || revert3 ||
+        revert4 || revert5 || revert6,
+        "file revert rules failed";
 }
 
 // Verify correct storage changes for non-reverting file for individual rate parameters
@@ -277,8 +289,8 @@ rule file_per_id_revert(bytes32 id, bytes32 what, uint256 data) {
     mathint wardsSender = wards(e.msg.sender);
     mathint minBefore; mathint maxBefore; mathint stepBefore;
     minBefore, maxBefore, stepBefore = cfgs(id);
-    mathint duty; mathint _rate;
-    duty, _rate = jug.ilks(id);
+    mathint duty; mathint _rho;
+    duty, _rho = jug.ilks(id);
 
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
@@ -290,59 +302,183 @@ rule file_per_id_revert(bytes32 id, bytes32 what, uint256 data) {
 
     file@withrevert(e, id, what, data);
 
-    assert lastReverted <=> revert1 || revert2 || revert3 ||
-                            revert4 || revert5 || revert6 ||
-                            revert7,
-                            "file revert rules failed";
+    assert lastReverted <=>
+        revert1 || revert2 || revert3 ||
+        revert4 || revert5 || revert6 ||
+        revert7,
+        "file revert rules failed";
 }
 
-// Verify correct storage changes for non-reverting set for a single rate.
-rule set_single(bytes32 id, uint256 bps) {
+ghost mapping(uint256 => uint256) bps_to_ray {
+    init_state axiom forall uint256 i. bps_to_ray[i] == 0;
+}
+
+// Verify correct storage changes for non-reverting set
+rule set(DSPC.ParamChange[] updates) {
     env e;
     bytes32 ilk;
     require ilk != DSR() && ilk != SSR();
-
-    mathint ray = conv.btor(bps);
+    require updates.length > 0 && updates.length < 4;
 
     mathint dsrBefore = pot.dsr();
-    mathint ssrBefore = susdsImp.ssr();
+    mathint ssrBefore = susds.ssr();
     mathint dutyBefore; mathint _rho;
     dutyBefore, _rho = jug.ilks(ilk);
 
-    set(e, id, bps);
+    set(e, updates);
 
     mathint dsrAfter = pot.dsr();
-    mathint ssrAfter = susdsImp.ssr();
+    mathint ssrAfter = susds.ssr();
     mathint dutyAfter;
     dutyAfter, _rho = jug.ilks(ilk);
 
-    assert id == DSR() => dsrAfter == ray, "set did not set dsr";
-    assert id != DSR() => dsrAfter == dsrBefore, "set did keep unchanged dsr";
+    // Manually convert all BPS values to RAY after the function call
+    // Store in the ghost mapping for use in the assertions
+    if (updates.length > 0) {
+        bps_to_ray[updates[0].bps] = conv.btor(updates[0].bps);
+    }
+    if (updates.length > 1) {
+        bps_to_ray[updates[1].bps] = conv.btor(updates[1].bps);
+    }
+    if (updates.length > 2) {
+        bps_to_ray[updates[2].bps] = conv.btor(updates[2].bps);
+    }
 
-    assert id == SSR() => ssrAfter == ray, "set did not set ssr";
-    assert id != SSR() => ssrAfter == ssrBefore, "set did keep unchanged ssr";
+    // If DSR is in updates, then its value should match the converted input value
+    assert exists uint256 i. i < updates.length => updates[i].id == DSR() =>
+        dsrAfter == to_mathint(bps_to_ray[updates[i].bps]), "DSR in updates; dsr not set correctly";
+    // If DSR is not in updates, then the value should not change
+    assert (forall uint256 i. i < updates.length => updates[i].id != DSR()) =>
+        dsrAfter == dsrBefore, "DSR not in updates; dsr changed unexpectedly";
+    // If the value of DSR changed, then it should be in updates
+    assert dsrAfter != dsrBefore =>
+        (exists uint256 i. i < updates.length => updates[i].id == DSR()), "dsr changed; DSR not in updates";
+    // If the value of DSR did not change, then it should either NOT be in updates or be in updates with the same value
+    assert dsrAfter == dsrBefore => (
+        (forall uint256 i. i < updates.length => updates[i].id != DSR()) ||
+        (exists uint256 i. i < updates.length => (updates[i].id == DSR() && to_mathint(bps_to_ray[updates[i].bps]) == dsrBefore))
+    ), "dsr not changed; DSR in updates with different value";
 
-    assert id == ilk => dutyAfter == ray, "set did not set duty";
-    assert id != ilk => dutyAfter == dutyBefore, "set did keep unchanged duty";
+
+    // If SSR is in updates, then its value should match the converted input value
+    assert exists uint256 i. i < updates.length => updates[i].id == SSR() =>
+        ssrAfter == to_mathint(bps_to_ray[updates[i].bps]), "SSR in updates; ssr not set correctly";
+    // If SSR is not in updates, then the value should not change
+    assert (forall uint256 i. i < updates.length => updates[i].id != SSR()) =>
+        ssrAfter == ssrBefore, "SSR not in updates; ssr changed unexpectedly";
+    // If the value of SSR changed, then it should be in updates
+    assert ssrAfter != ssrBefore => (
+        exists uint256 i. i < updates.length => updates[i].id == SSR()
+    ), "ssr changed; SSR not in updates";
+    // If the value of SSR did not change, then it should either NOT be in updates or be in updates with the same value
+    assert ssrAfter == ssrBefore => (
+        (forall uint256 i. i < updates.length => updates[i].id != SSR()) ||
+        (exists uint256 i. i < updates.length => (updates[i].id == SSR() && to_mathint(bps_to_ray[updates[i].bps]) == ssrBefore))
+    ), "ssr not changed; SSR in updates with different value";
+
+
+    // If ilk is in updates, then its duty value should match the converted input value
+    assert exists uint256 i. i < updates.length => updates[i].id == ilk =>
+        dutyAfter == to_mathint(bps_to_ray[updates[i].bps]), "ilk in updates; duty not set correctly";
+    // If ilk is not in updates, then the value should not change
+    assert (forall uint256 i. i < updates.length => updates[i].id != ilk) =>
+        dutyAfter == dutyBefore, "ilk not in updates; duty changed unexpectedly";
+    // If the value of ilk duty changed, then it should be in updates
+    assert dutyAfter != dutyBefore =>
+        (exists uint256 i. i < updates.length => updates[i].id == ilk), "duty changed; ilk not in updates";
+    // If the value of ilk duty did not change, then it should either NOT be in updates or be in updates with the same value
+    assert dutyAfter == dutyBefore => (
+        (forall uint256 i. i < updates.length => updates[i].id != ilk) ||
+        (exists uint256 i. i < updates.length => (updates[i].id == ilk && to_mathint(bps_to_ray[updates[i].bps]) == dutyBefore))
+    ), "duty not changed; ilk in updates with different value";
 }
 
-// Verify revert rules for set for a single rate
-rule set_single_revert(bytes32 id, uint256 bps) {
-    env e;
+ghost mapping(bytes32 => bool) set_item_reverted {
+    init_state axiom forall bytes32 i. set_item_reverted[i] == false;
+}
 
-    mathint tau = tau();
-    mathint toc = toc();
+rule set_revert(DSPC.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss) {
+    env e;
+    bytes32 ilk;
+
+    require ilk != DSR() && ilk != SSR();
+    require updates.length < 4;
+    require updates.length == bpss.length;
+    require idsAsUints.length == bpss.length;
+    // ID cannot be bytes32(0)
+    require forall uint256 i. i < updates.length => (
+        updates[i].id != EMPTY_BYTES32() &&
+            updates[i].id == to_bytes32(idsAsUints[i]) &&
+            updates[i].bps == to_mathint(bpss[i])
+    );
+    // It is impossible for `toc` to be greater than block.timestamp
+    require toc() <= e.block.timestamp;
+    // Required because `toc` is a `uint128` and `toc = block.timestamp` in the implementation
+    require e.block.timestamp <= max_uint128;
+
+    bool revert1 = e.msg.value > 0;
+    bool revert2 = buds(e.msg.sender) != 1;
+    bool revert3 = bad() != 0;
+    bool revert4 = e.block.timestamp < tau() + toc();
+    // No updates
+    bool revert5 = updates.length == 0;
+    // Sorted elements
+    bool revert6 = idsAsUints.length == 2 ? idsAsUints[0] >= idsAsUints[1] : false;
+    bool revert7 = idsAsUints.length == 3 ? (
+        idsAsUints[0] >= idsAsUints[1] ||
+        idsAsUints[0] >= idsAsUints[2] ||
+        idsAsUints[1] >= idsAsUints[2]
+    ) : false;
+
+    if (updates.length > 0) {
+        set_item_reverted[updates[0].id] = check_item_revert(e, updates[0].id, updates[0].bps);
+    }
+    if (updates.length > 1) {
+        set_item_reverted[updates[1].id] = check_item_revert(e, updates[1].id, updates[1].bps);
+    }
+    if (updates.length > 2) {
+        set_item_reverted[updates[2].id] = check_item_revert(e, updates[2].id, updates[2].bps);
+    }
+
+    bool revert8 = exists uint256 i. i < updates.length => set_item_reverted[updates[i].id] == true;
+
+    set@withrevert(e, updates);
+
+    assert lastReverted =>
+        revert1 || revert2 || revert3 ||
+        revert4 || revert5 || revert6 ||
+        revert7 || revert8,
+        "set reverted due to unknown reason";
+
+    assert
+        revert1 || revert2 || revert3 ||
+        revert4 || revert5 || revert6 ||
+        revert7 || revert8 =>
+        lastReverted,
+        "set did not revert when expected";
+}
+
+function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
     mathint min; mathint max; mathint step;
     min, max, step = cfgs(id);
 
+    // min <= max is enforced in the implementation
+    require min <= max;
+
     mathint oldBps;
     if (id == DSR()) {
+        // IF block.timestamp < rho, drip will revert
+        require(e.block.timestamp >= pot.rho());
         oldBps = conv.rtob(pot.dsr());
     } else if (id == SSR()) {
-        oldBps = conv.rtob(susdsImp.ssr());
+        // IF block.timestamp <= rho, drip will not update rho and file will revert
+        require(e.block.timestamp > pot.rho());
+        oldBps = conv.rtob(susds.ssr());
     } else {
-        uint256 duty; mathint _rate;
-        duty, _rate = jug.ilks(id);
+        uint256 duty; mathint rho;
+        duty, rho = jug.ilks(id);
+        // IF rho >= block.timestamp, drip will revert
+        require(e.block.timestamp >= rho);
         oldBps = conv.rtob(duty);
     }
 
@@ -359,18 +495,19 @@ rule set_single_revert(bytes32 id, uint256 bps) {
     mathint delta = bps > actualOldBps ? bps - actualOldBps : actualOldBps - bps;
     mathint ray = conv.btor(bps);
 
-    bool revert1 = e.msg.value > 0;
-    bool revert2 = e.block.timestamp < tau + toc;
-    bool revert3 = step == 0;
-    bool revert4 = to_mathint(bps) > max;
-    bool revert5 = to_mathint(bps) < min;
-    bool revert6 = delta > step;
-    bool revert7 = ray < RAY();
+    bool revertA = step == 0;
+    bool revertB = to_mathint(bps) > max;
+    bool revertC = to_mathint(bps) < min;
+    bool revertD = delta > step;
+    bool revertE = ray < RAY();
+    bool revertF = bps > conv.MAX_BPS_IN();
+    bool revertG = id == DSR() && pot.wards(currentContract) != 1;
+    bool revertH = id == SSR() && susds.wards(currentContract) != 1;
+    bool revertI = id != DSR() && id != SSR() && jug.wards(currentContract) != 1;
 
-    set@withrevert(e, id, bps);
+    return
+        revertA  || revertB || revertC ||
+        revertD  || revertE || revertF ||
+        revertG  || revertH || revertI;
 
-    assert lastReverted <=> revert1 || revert2 || revert3 ||
-                            revert4 || revert5 || revert6 ||
-                            revert7,
-                            "set revert rules failed";
 }

@@ -172,19 +172,18 @@ contract Pot is LibNote {
     }
 
     // --- Administration ---
-    function file(bytes32 what, uint256 data) external note auth {
-        require(live == 1, "Pot/not-live");
+    function file(bytes32 what, uint256 data) external auth note {
         require(now == rho, "Pot/rho-not-updated");
         if (what == "dsr") dsr = data;
         else revert("Pot/file-unrecognized-param");
     }
 
-    function file(bytes32 what, address addr) external note auth {
+    function file(bytes32 what, address addr) external auth note {
         if (what == "vow") vow = addr;
         else revert("Pot/file-unrecognized-param");
     }
 
-    function cage() external note auth {
+    function cage() external note {
         live = 0;
         dsr = ONE;
     }
@@ -192,11 +191,12 @@ contract Pot is LibNote {
     // --- Savings Rate Accumulation ---
     function drip() external note returns (uint tmp) {
         require(now >= rho, "Pot/invalid-now");
-        tmp = rmul(rpow(dsr, now - rho, ONE), chi);
-        uint chi_ = sub(tmp, chi);
-        chi = tmp;
+        // Note: ignoring rpow for Certora
+        // tmp = rmul(rpow(dsr, now - rho, ONE), chi);
+        // uint chi_ = sub(tmp, chi);
+        // chi = tmp;
         rho = now;
-        vat.suck(address(vow), address(this), mul(Pie, chi_));
+        // vat.suck(address(vow), address(this), mul(Pie, chi));
     }
 
     // --- Savings Dai Management ---

@@ -1024,7 +1024,7 @@ contract SUsds is UUPSUpgradeable {
         emit Rely(msg.sender);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override auth {}
+    function _authorizeUpgrade(address newImplementation) internal override {}
 
     function getImplementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
@@ -1085,12 +1085,12 @@ contract SUsds is UUPSUpgradeable {
 
     // --- Admin external functions ---
 
-    function rely(address usr) external auth {
+    function rely(address usr) external {
         wards[usr] = 1;
         emit Rely(usr);
     }
 
-    function deny(address usr) external auth {
+    function deny(address usr) external {
         wards[usr] = 0;
         emit Deny(usr);
     }
@@ -1108,18 +1108,8 @@ contract SUsds is UUPSUpgradeable {
 
     function drip() public returns (uint256 nChi) {
         (uint256 chi_, uint256 rho_) = (chi, rho);
-        uint256 diff;
-        if (block.timestamp > rho_) {
-            nChi = _rpow(ssr, block.timestamp - rho_) * chi_ / RAY;
-            uint256 totalSupply_ = totalSupply;
-            diff = totalSupply_ * nChi / RAY - totalSupply_ * chi_ / RAY;
-            vat.suck(address(vow), address(this), diff * RAY);
-            usdsJoin.exit(address(this), diff);
-            chi = uint192(nChi); // safe as nChi is limited to maxUint256/RAY (which is < maxUint192)
-            rho = uint64(block.timestamp);
-        } else {
-            nChi = chi_;
-        }
+        uint256 diff = 0;
+        rho = uint64(block.timestamp);
         emit Drip(nChi, diff);
     }
 
