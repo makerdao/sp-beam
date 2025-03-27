@@ -38,11 +38,6 @@ methods {
     function vat.ilks(bytes32) external returns (uint256, uint256, uint256, uint256, uint256) envfree;
     function vat.live() external returns (uint256) envfree;
     function vat.urns(bytes32, address) external returns (uint256, uint256) envfree;
-
-    function _.ilks(bytes32) external => DISPATCHER(true);
-    function _.suck(address, address, uint256) external => DISPATCHER(true);
-    function _.fold(bytes32, address, int256) external => DISPATCHER(true);
-    function _.exit(address, uint256) external => DISPATCHER(true);
 }
 
 definition EMPTY_BYTES32() returns bytes32 = to_bytes32(0x0000000000000000000000000000000000000000000000000000000000000000);
@@ -440,8 +435,6 @@ rule set_revert(DSPC.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss
         set_item_reverted[updates[2].id] = check_item_revert(e, updates[2].id, updates[2].bps);
     }
 
-    /* bool revert8 = exists uint256 i. i < updates.length => set_item_reverted[updates[i].id] == true; */
-
     bool revert8 = updates.length > 0 ? set_item_reverted[updates[0].id] : false;
     bool revert9 = updates.length > 1
         ? set_item_reverted[updates[0].id] || set_item_reverted[updates[1].id]
@@ -457,14 +450,7 @@ rule set_revert(DSPC.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss
         revert4 || revert5 || revert6 ||
         revert7 || revert8 || revert9 ||
         revert10,
-        "set revert conditions failed";
-
-    /* assert */
-    /*     revert1 || revert2 || revert3 || */
-    /*     revert4 || revert5 || revert6 || */
-    /*     revert7 || revert8 => */
-    /*     lastReverted, */
-    /*     "set did not revert when expected"; */
+        "set revert rules failed";
 }
 
 function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {

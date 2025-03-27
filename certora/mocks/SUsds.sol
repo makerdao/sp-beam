@@ -953,7 +953,7 @@ contract SUsds is UUPSUpgradeable {
     mapping (address => uint256)                      public nonces;
     // Savings yield
     uint256 public chi;   // The Rate Accumulator  [ray]
-    uint256  public rho;   // Time of last drip     [unix epoch time]
+    uint256 public rho;   // Time of last drip     [unix epoch time]
     uint256 public ssr;   // The USDS Savings Rate [ray]
 
     // --- Constants ---
