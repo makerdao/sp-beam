@@ -111,7 +111,9 @@ contract SPBEAMMomIntegrationTest is DssTest {
     }
 
     function test_only_owner_methods() public {
-        checkModifier(address(mom), "SPBEAMMom/not-owner", [SPBEAMMom.setOwner.selector, SPBEAMMom.setAuthority.selector]);
+        checkModifier(
+            address(mom), "SPBEAMMom/not-owner", [SPBEAMMom.setOwner.selector, SPBEAMMom.setAuthority.selector]
+        );
     }
 
     function test_auth_methods() public {
