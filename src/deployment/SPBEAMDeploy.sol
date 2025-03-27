@@ -17,18 +17,18 @@
 pragma solidity ^0.8.24;
 
 import {ScriptTools} from "dss-test/ScriptTools.sol";
-import {DSPC} from "../DSPC.sol";
-import {DSPCMom} from "../DSPCMom.sol";
-import {DSPCInstance} from "./DSPCInstance.sol";
+import {SPBEAM} from "../SPBEAM.sol";
+import {SPBEAMMom} from "../SPBEAMMom.sol";
+import {SPBEAMInstance} from "./SPBEAMInstance.sol";
 
 interface MomLike {
     function setOwner(address owner) external;
 }
 
-/// @title DSPC Deployment Parameters
-/// @notice Parameters required for deploying the DSPC system
-/// @dev Used to configure the initial setup of DSPC and DSPCMom contracts
-struct DSPCDeployParams {
+/// @title SPBEAM Deployment Parameters
+/// @notice Parameters required for deploying the SPBEAM system
+/// @dev Used to configure the initial setup of SPBEAM and SPBEAMMom contracts
+struct SPBEAMDeployParams {
     /// @dev Address deploying the contracts
     address deployer;
     /// @dev Final owner address after deployment
@@ -43,23 +43,23 @@ struct DSPCDeployParams {
     address conv;
 }
 
-/// @title DSPC Deployment Library
-/// @notice Handles deployment of DSPC system contracts
-/// @dev Deploys and configures DSPC and DSPCMom contracts with proper permissions
-library DSPCDeploy {
-    /// @notice Deploy DSPC system contracts
-    /// @dev Deploys DSPC and DSPCMom, sets up initial permissions
+/// @title SPBEAM Deployment Library
+/// @notice Handles deployment of SPBEAM system contracts
+/// @dev Deploys and configures SPBEAM and SPBEAMMom contracts with proper permissions
+library SPBEAMDeploy {
+    /// @notice Deploy SPBEAM system contracts
+    /// @dev Deploys SPBEAM and SPBEAMMom, sets up initial permissions
     /// @param params Configuration parameters for deployment
     /// @return inst Instance containing addresses of deployed contracts
-    function deploy(DSPCDeployParams memory params) internal returns (DSPCInstance memory inst) {
-        // Deploy DSPC with core contract references
-        inst.dspc = address(new DSPC(params.jug, params.pot, params.susds, params.conv));
+    function deploy(SPBEAMDeployParams memory params) internal returns (SPBEAMInstance memory inst) {
+        // Deploy SPBEAM with core contract references
+        inst.spbeam = address(new SPBEAM(params.jug, params.pot, params.susds, params.conv));
 
-        // Deploy DSPCMom for governance
-        inst.mom = address(new DSPCMom());
+        // Deploy SPBEAMMom for governance
+        inst.mom = address(new SPBEAMMom());
 
         // Switch owners
-        ScriptTools.switchOwner(inst.dspc, params.deployer, params.owner);
+        ScriptTools.switchOwner(inst.spbeam, params.deployer, params.owner);
         MomLike(inst.mom).setOwner(params.owner);
     }
 }

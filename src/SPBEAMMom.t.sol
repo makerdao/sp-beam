@@ -17,12 +17,12 @@
 pragma solidity ^0.8.24;
 
 import "dss-test/DssTest.sol";
-import {DSPC} from "./DSPC.sol";
-import {DSPCMom} from "./DSPCMom.sol";
+import {SPBEAM} from "./SPBEAM.sol";
+import {SPBEAMMom} from "./SPBEAMMom.sol";
 import {ConvMock} from "./mocks/ConvMock.sol";
-import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
-import {DSPCInit, DSPCConfig, DSPCRateConfig} from "./deployment/DSPCInit.sol";
-import {DSPCInstance} from "./deployment/DSPCInstance.sol";
+import {SPBEAMDeploy, SPBEAMDeployParams} from "./deployment/SPBEAMDeploy.sol";
+import {SPBEAMInit, SPBEAMConfig, SPBEAMRateConfig} from "./deployment/SPBEAMInit.sol";
+import {SPBEAMInstance} from "./deployment/SPBEAMInstance.sol";
 
 interface ChiefLike {
     function hat() external view returns (address);
@@ -43,23 +43,23 @@ interface ProxyLike {
 }
 
 contract InitCaller {
-    function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) external {
-        DSPCInit.init(dss, inst, cfg);
+    function init(DssInstance memory dss, SPBEAMInstance memory inst, SPBEAMConfig memory cfg) external {
+        SPBEAMInit.init(dss, inst, cfg);
     }
 }
 
-contract DSPCMomIntegrationTest is DssTest {
+contract SPBEAMMomIntegrationTest is DssTest {
     address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
     // --- Events ---
     event SetOwner(address indexed owner);
     event SetAuthority(address indexed authority);
-    event Halt(address indexed dspc);
+    event Halt(address indexed spbeam);
 
     DssInstance dss;
     ChiefLike chief;
-    DSPC dspc;
-    DSPCMom mom;
+    SPBEAM spbeam;
+    SPBEAMMom mom;
     ConvLike conv;
     SUSDSLike susds;
     address pause;
@@ -83,8 +83,8 @@ contract DSPCMomIntegrationTest is DssTest {
 
         conv = ConvLike(address(new ConvMock()));
 
-        DSPCInstance memory inst = DSPCDeploy.deploy(
-            DSPCDeployParams({
+        SPBEAMInstance memory inst = SPBEAMDeploy.deploy(
+            SPBEAMDeployParams({
                 deployer: address(this),
                 owner: address(pauseProxy),
                 jug: address(dss.jug),
@@ -93,13 +93,13 @@ contract DSPCMomIntegrationTest is DssTest {
                 conv: address(conv)
             })
         );
-        dspc = DSPC(inst.dspc);
-        mom = DSPCMom(inst.mom);
+        spbeam = SPBEAM(inst.spbeam);
+        mom = SPBEAMMom(inst.mom);
 
         // Initialize deployment
-        DSPCConfig memory cfg = DSPCConfig({
+        SPBEAMConfig memory cfg = SPBEAMConfig({
             tau: 0, // Start with tau = 0 for tests
-            ilks: new DSPCRateConfig[](0), // No ilks for this test
+            ilks: new SPBEAMRateConfig[](0), // No ilks for this test
             bud: address(0) // No bud for this test
         });
         vm.prank(pause);
@@ -111,15 +111,15 @@ contract DSPCMomIntegrationTest is DssTest {
     }
 
     function test_only_owner_methods() public {
-        checkModifier(address(mom), "DSPCMom/not-owner", [DSPCMom.setOwner.selector, DSPCMom.setAuthority.selector]);
+        checkModifier(address(mom), "SPBEAMMom/not-owner", [SPBEAMMom.setOwner.selector, SPBEAMMom.setAuthority.selector]);
     }
 
     function test_auth_methods() public {
-        checkModifier(address(mom), "DSPCMom/not-authorized", [DSPCMom.halt.selector]);
+        checkModifier(address(mom), "SPBEAMMom/not-authorized", [SPBEAMMom.halt.selector]);
 
         vm.prank(address(pauseProxy));
         mom.setAuthority(address(0));
-        checkModifier(address(mom), "DSPCMom/not-authorized", [DSPCMom.halt.selector]);
+        checkModifier(address(mom), "SPBEAMMom/not-authorized", [SPBEAMMom.halt.selector]);
     }
 
     function test_setOwner() public {
@@ -141,9 +141,9 @@ contract DSPCMomIntegrationTest is DssTest {
     function check_halt(address who) internal {
         vm.prank(who);
         vm.expectEmit(true, true, true, true);
-        emit Halt(address(dspc));
-        mom.halt(address(dspc));
-        assertEq(dspc.bad(), 1);
+        emit Halt(address(spbeam));
+        mom.halt(address(spbeam));
+        assertEq(spbeam.bad(), 1);
     }
 
     function test_halt_owner() public {

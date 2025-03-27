@@ -20,16 +20,16 @@ interface AuthorityLike {
     function canCall(address src, address dst, bytes4 sig) external view returns (bool);
 }
 
-interface DSPCLike {
+interface SPBEAMLike {
     function file(bytes32 what, uint256 data) external;
 }
 
-/// @title DSPC Mom - Shutdown DSPC bypassing GSM delay.
-/// @notice Governance contract for halting DSPC module operations
+/// @title SPBEAM Mom - Shutdown SPBEAM bypassing GSM delay.
+/// @notice Governance contract for halting SPBEAM module operations
 /// @dev Provides:
 ///      - Owner/authority-based access control
 ///      - Emergency halt without delay
-contract DSPCMom {
+contract SPBEAMMom {
     // --- Auth ---
     /// @notice Owner with full admin rights
     address public owner;
@@ -41,17 +41,17 @@ contract DSPCMom {
     event SetOwner(address indexed owner);
     /// @notice Authority contract changed
     event SetAuthority(address indexed authority);
-    /// @notice DSPC module halted
-    event Halt(address indexed dspc);
+    /// @notice SPBEAM module halted
+    event Halt(address indexed spbeam);
 
     // --- Modifiers ---
     modifier onlyOwner() {
-        require(msg.sender == owner, "DSPCMom/not-owner");
+        require(msg.sender == owner, "SPBEAMMom/not-owner");
         _;
     }
 
     modifier auth() {
-        require(isAuthorized(msg.sender, msg.sig), "DSPCMom/not-authorized");
+        require(isAuthorized(msg.sender, msg.sig), "SPBEAMMom/not-authorized");
         _;
     }
 
@@ -92,11 +92,11 @@ contract DSPCMom {
     }
 
     // --- Emergency Actions ---
-    /// @notice Emergency halt of DSPC module
-    /// @param dspc Target DSPC contract
+    /// @notice Emergency halt of SPBEAM module
+    /// @param spbeam Target SPBEAM contract
     /// @dev Sets bad=1 to immediately halt operations
-    function halt(address dspc) external auth {
-        DSPCLike(dspc).file("bad", 1);
-        emit Halt(dspc);
+    function halt(address spbeam) external auth {
+        SPBEAMLike(spbeam).file("bad", 1);
+        emit Halt(spbeam);
     }
 }
