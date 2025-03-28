@@ -1,6 +1,6 @@
 /**
- *Submitted for verification at Etherscan.io on 2019-11-14
-*/
+ * Submitted for verification at Etherscan.io on 2019-11-14
+ */
 
 // hevm: flattened sources of /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/jug.sol
 pragma solidity =0.5.12;
@@ -23,29 +23,28 @@ pragma solidity =0.5.12;
 
 contract LibNote {
     event LogNote(
-        bytes4   indexed  sig,
-        address  indexed  usr,
-        bytes32  indexed  arg1,
-        bytes32  indexed  arg2,
-        bytes             data
+        bytes4 indexed sig, address indexed usr, bytes32 indexed arg1, bytes32 indexed arg2, bytes data
     ) anonymous;
 
-    modifier note {
+    modifier note( // end of memory ensures zero
+    ) {
         _;
         assembly {
             // log an 'anonymous' event with a constant 6 words of calldata
             // and four indexed topics: selector, caller, arg1 and arg2
-            let mark := msize                         // end of memory ensures zero
-            mstore(0x40, add(mark, 288))              // update free memory pointer
-            mstore(mark, 0x20)                        // bytes type data offset
-            mstore(add(mark, 0x20), 224)              // bytes size (padded)
-            calldatacopy(add(mark, 0x40), 0, 224)     // bytes payload
-            log4(mark, 288,                           // calldata
-                 shl(224, shr(224, calldataload(0))), // msg.sig
-                 caller,                              // msg.sender
-                 calldataload(4),                     // arg1
-                 calldataload(36)                     // arg2
-                )
+            let mark := msize
+            mstore(0x40, add(mark, 288)) // update free memory pointer
+            mstore(mark, 0x20) // bytes type data offset
+            mstore(add(mark, 0x20), 224) // bytes size (padded)
+            calldatacopy(add(mark, 0x40), 0, 224) // bytes payload
+            log4(
+                mark,
+                288, // calldata
+                shl(224, shr(224, calldataload(0))), // msg.sig
+                caller, // msg.sender
+                calldataload(4), // arg1
+                calldataload(36) // arg2
+            )
         }
     }
 }
@@ -56,19 +55,29 @@ contract LibNote {
 /* import "./lib.sol"; */
 
 contract VatLike {
-    function ilks(bytes32) external returns (
-        uint256 Art,   // wad
-        uint256 rate   // ray
-    );
-    function fold(bytes32,address,int) external;
+    function ilks(bytes32)
+        external
+        returns (
+            uint256 Art, // wad
+            uint256 rate
+        ); // ray
+
+    function fold(bytes32, address, int256) external;
 }
 
 contract Jug is LibNote {
     // --- Auth ---
-    mapping (address => uint) public wards;
-    function rely(address usr) external note auth { wards[usr] = 1; }
-    function deny(address usr) external note auth { wards[usr] = 0; }
-    modifier auth {
+    mapping(address => uint256) public wards;
+
+    function rely(address usr) external note auth {
+        wards[usr] = 1;
+    }
+
+    function deny(address usr) external note auth {
+        wards[usr] = 0;
+    }
+
+    modifier auth() {
         require(wards[msg.sender] == 1, "Jug/not-authorized");
         _;
     }
@@ -76,13 +85,13 @@ contract Jug is LibNote {
     // --- Data ---
     struct Ilk {
         uint256 duty;
-        uint256  rho;
+        uint256 rho;
     }
 
-    mapping (bytes32 => Ilk) public ilks;
-    VatLike                  public vat;
-    address                  public vow;
-    uint256                  public base;
+    mapping(bytes32 => Ilk) public ilks;
+    VatLike public vat;
+    address public vow;
+    uint256 public base;
 
     // --- Init ---
     constructor(address vat_) public {
@@ -91,39 +100,50 @@ contract Jug is LibNote {
     }
 
     // --- Math ---
-    function rpow(uint x, uint n, uint b) internal pure returns (uint z) {
-      assembly {
-        switch x case 0 {switch n case 0 {z := b} default {z := 0}}
-        default {
-          switch mod(n, 2) case 0 { z := b } default { z := x }
-          let half := div(b, 2)  // for rounding.
-          for { n := div(n, 2) } n { n := div(n,2) } {
-            let xx := mul(x, x)
-            if iszero(eq(div(xx, x), x)) { revert(0,0) }
-            let xxRound := add(xx, half)
-            if lt(xxRound, xx) { revert(0,0) }
-            x := div(xxRound, b)
-            if mod(n,2) {
-              let zx := mul(z, x)
-              if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
-              let zxRound := add(zx, half)
-              if lt(zxRound, zx) { revert(0,0) }
-              z := div(zxRound, b)
+    function rpow(uint256 x, uint256 n, uint256 b) internal pure returns (uint256 z) {
+        assembly {
+            switch x
+            case 0 {
+                switch n
+                case 0 { z := b }
+                default { z := 0 }
             }
-          }
+            default {
+                switch mod(n, 2)
+                case 0 { z := b }
+                default { z := x }
+                let half := div(b, 2) // for rounding.
+                for { n := div(n, 2) } n { n := div(n, 2) } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) { revert(0, 0) }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) { revert(0, 0) }
+                    x := div(xxRound, b)
+                    if mod(n, 2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0, 0) }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) { revert(0, 0) }
+                        z := div(zxRound, b)
+                    }
+                }
+            }
         }
-      }
     }
+
     uint256 constant ONE = 10 ** 27;
-    function add(uint x, uint y) internal pure returns (uint z) {
+
+    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         z = x + y;
         require(z >= x);
     }
-    function diff(uint x, uint y) internal pure returns (int z) {
-        z = int(x) - int(y);
-        require(int(x) >= 0 && int(y) >= 0);
+
+    function diff(uint256 x, uint256 y) internal pure returns (int256 z) {
+        z = int256(x) - int256(y);
+        require(int256(x) >= 0 && int256(y) >= 0);
     }
-    function rmul(uint x, uint y) internal pure returns (uint z) {
+
+    function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         z = x * y;
         require(y == 0 || z / y == x);
         z = z / ONE;
@@ -134,24 +154,27 @@ contract Jug is LibNote {
         Ilk storage i = ilks[ilk];
         require(i.duty == 0, "Jug/ilk-already-init");
         i.duty = ONE;
-        i.rho  = now;
+        i.rho = now;
     }
-    function file(bytes32 ilk, bytes32 what, uint data) external auth note {
+
+    function file(bytes32 ilk, bytes32 what, uint256 data) external auth note {
         require(now == ilks[ilk].rho, "Jug/rho-not-updated");
         if (what == "duty") ilks[ilk].duty = data;
         else revert("Jug/file-unrecognized-param");
     }
-    function file(bytes32 what, uint data) external auth note {
+
+    function file(bytes32 what, uint256 data) external auth note {
         if (what == "base") base = data;
         else revert("Jug/file-unrecognized-param");
     }
+
     function file(bytes32 what, address data) external auth note {
         if (what == "vow") vow = data;
         else revert("Jug/file-unrecognized-param");
     }
 
     // --- Stability Fee Collection ---
-    function drip(bytes32 ilk) external note returns (uint rate) {
+    function drip(bytes32 ilk) external note returns (uint256 rate) {
         require(now >= ilks[ilk].rho, "Jug/invalid-now");
         // (, uint prev) = vat.ilks(ilk);
         // Note: ignoring rpow for Certora

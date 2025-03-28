@@ -309,7 +309,7 @@ library Address {
             revert AddressInsufficientBalance(address(this));
         }
 
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success,) = recipient.call{value: amount}("");
         if (!success) {
             revert FailedInnerCall();
         }
@@ -377,11 +377,11 @@ library Address {
      * was not a contract or bubbling up the revert reason (falling back to {FailedInnerCall}) in case of an
      * unsuccessful call.
      */
-    function verifyCallResultFromTarget(
-        address target,
-        bool success,
-        bytes memory returndata
-    ) internal view returns (bytes memory) {
+    function verifyCallResultFromTarget(address target, bool success, bytes memory returndata)
+        internal
+        view
+        returns (bytes memory)
+    {
         if (!success) {
             _revert(returndata);
         } else {
@@ -807,11 +807,9 @@ abstract contract UUPSUpgradeable is Initializable, IERC1822Proxiable {
         _;
     }
 
-    function __UUPSUpgradeable_init() internal onlyInitializing {
-    }
+    function __UUPSUpgradeable_init() internal onlyInitializing {}
 
-    function __UUPSUpgradeable_init_unchained() internal onlyInitializing {
-    }
+    function __UUPSUpgradeable_init_unchained() internal onlyInitializing {}
     /**
      * @dev Implementation of the ERC1822 {proxiableUUID} function. This returns the storage slot used by the
      * implementation. It is used to validate the implementation's compatibility when performing an upgrade.
@@ -820,6 +818,7 @@ abstract contract UUPSUpgradeable is Initializable, IERC1822Proxiable {
      * bricking a proxy that upgrades to it, by delegating to itself until out of gas. Thus it is critical that this
      * function revert if invoked through a proxy. This is guaranteed by the `notDelegated` modifier.
      */
+
     function proxiableUUID() external view virtual notDelegated returns (bytes32) {
         return ERC1967Utils.IMPLEMENTATION_SLOT;
     }
@@ -846,8 +845,8 @@ abstract contract UUPSUpgradeable is Initializable, IERC1822Proxiable {
      */
     function _checkProxy() internal view virtual {
         if (
-            address(this) == __self || // Must be called through delegatecall
-            ERC1967Utils.getImplementation() != __self // Must be called through an active proxy
+            address(this) == __self // Must be called through delegatecall
+                || ERC1967Utils.getImplementation() != __self // Must be called through an active proxy
         ) {
             revert UUPSUnauthorizedCallContext();
         }
@@ -918,10 +917,7 @@ abstract contract UUPSUpgradeable is Initializable, IERC1822Proxiable {
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 interface IERC1271 {
-    function isValidSignature(
-        bytes32,
-        bytes memory
-    ) external view returns (bytes4);
+    function isValidSignature(bytes32, bytes memory) external view returns (bytes4);
 }
 
 interface VatLike {
@@ -941,40 +937,40 @@ interface UsdsLike {
 }
 
 contract SUsds is UUPSUpgradeable {
-
     // --- Storage Variables ---
 
     // Admin
-    mapping (address => uint256) public wards;
+    mapping(address => uint256) public wards;
     // ERC20
-    uint256                                           public totalSupply;
-    mapping (address => uint256)                      public balanceOf;
-    mapping (address => mapping (address => uint256)) public allowance;
-    mapping (address => uint256)                      public nonces;
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+    mapping(address => uint256) public nonces;
     // Savings yield
-    uint256 public chi;   // The Rate Accumulator  [ray]
-    uint256 public rho;   // Time of last drip     [unix epoch time]
-    uint256 public ssr;   // The USDS Savings Rate [ray]
+    uint256 public chi; // The Rate Accumulator  [ray]
+    uint256 public rho; // Time of last drip     [unix epoch time]
+    uint256 public ssr; // The USDS Savings Rate [ray]
 
     // --- Constants ---
 
     // ERC20
-    string  public constant name     = "Savings USDS";
-    string  public constant symbol   = "sUSDS";
-    string  public constant version  = "1";
-    uint8   public constant decimals = 18;
+    string public constant name = "Savings USDS";
+    string public constant symbol = "sUSDS";
+    string public constant version = "1";
+    uint8 public constant decimals = 18;
     // Math
     uint256 private constant RAY = 10 ** 27;
 
     // --- Immutables ---
 
     // EIP712
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     // Savings yield
     UsdsJoinLike public immutable usdsJoin;
-    VatLike      public immutable vat;
-    UsdsLike     public immutable usds;
-    address      public immutable vow;
+    VatLike public immutable vat;
+    UsdsLike public immutable usds;
+    address public immutable vow;
 
     // --- Events ---
 
@@ -987,7 +983,9 @@ contract SUsds is UUPSUpgradeable {
     event Transfer(address indexed from, address indexed to, uint256 value);
     // ERC4626
     event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
-    event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares);
+    event Withdraw(
+        address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
+    );
     // Referral
     event Referral(uint16 indexed referral, address indexed owner, uint256 assets, uint256 shares);
     // Savings yield
@@ -995,7 +993,7 @@ contract SUsds is UUPSUpgradeable {
 
     // --- Modifiers ---
 
-    modifier auth {
+    modifier auth() {
         require(wards[msg.sender] == 1, "SUsds/not-authorized");
         _;
     }
@@ -1013,7 +1011,7 @@ contract SUsds is UUPSUpgradeable {
 
     // --- Upgradability ---
 
-    function initialize() initializer external {
+    function initialize() external initializer {
         __UUPSUpgradeable_init();
 
         chi = RAY;
@@ -1054,21 +1052,28 @@ contract SUsds is UUPSUpgradeable {
 
     function _rpow(uint256 x, uint256 n) internal pure returns (uint256 z) {
         assembly {
-            switch x case 0 {switch n case 0 {z := RAY} default {z := 0}}
+            switch x
+            case 0 {
+                switch n
+                case 0 { z := RAY }
+                default { z := 0 }
+            }
             default {
-                switch mod(n, 2) case 0 { z := RAY } default { z := x }
-                let half := div(RAY, 2)  // for rounding.
-                for { n := div(n, 2) } n { n := div(n,2) } {
+                switch mod(n, 2)
+                case 0 { z := RAY }
+                default { z := x }
+                let half := div(RAY, 2) // for rounding.
+                for { n := div(n, 2) } n { n := div(n, 2) } {
                     let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
+                    if iszero(eq(div(xx, x), x)) { revert(0, 0) }
                     let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0,0) }
+                    if lt(xxRound, xx) { revert(0, 0) }
                     x := div(xxRound, RAY)
-                    if mod(n,2) {
+                    if mod(n, 2) {
                         let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0, 0) }
                         let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0,0) }
+                        if lt(zxRound, zx) { revert(0, 0) }
                         z := div(zxRound, RAY)
                     }
                 }
@@ -1100,7 +1105,9 @@ contract SUsds is UUPSUpgradeable {
             require(data >= RAY, "SUsds/wrong-ssr-value");
             require(rho == block.timestamp, "SUsds/chi-not-up-to-date");
             ssr = data;
-        } else revert("SUsds/file-unrecognized-param");
+        } else {
+            revert("SUsds/file-unrecognized-param");
+        }
         emit File(what, data);
     }
 
@@ -1197,7 +1204,7 @@ contract SUsds is UUPSUpgradeable {
 
         unchecked {
             balanceOf[owner] = balance - shares; // note: we don't need overflow checks b/c require(balance >= shares) and balance <= totalSupply
-            totalSupply      = totalSupply - shares;
+            totalSupply = totalSupply - shares;
         }
 
         usds.transfer(receiver, assets);
@@ -1292,11 +1299,11 @@ contract SUsds is UUPSUpgradeable {
 
     // --- Approve by signature ---
 
-    function _isValidSignature(
-        address signer,
-        bytes32 digest,
-        bytes memory signature
-    ) internal view returns (bool valid) {
+    function _isValidSignature(address signer, bytes32 digest, bytes memory signature)
+        internal
+        view
+        returns (bool valid)
+    {
         if (signature.length == 65) {
             bytes32 r;
             bytes32 s;
@@ -1312,41 +1319,29 @@ contract SUsds is UUPSUpgradeable {
         }
 
         if (signer.code.length > 0) {
-            (bool success, bytes memory result) = signer.staticcall(
-                abi.encodeCall(IERC1271.isValidSignature, (digest, signature))
-            );
-            valid = (success &&
-                result.length == 32 &&
-                abi.decode(result, (bytes4)) == IERC1271.isValidSignature.selector);
+            (bool success, bytes memory result) =
+                signer.staticcall(abi.encodeCall(IERC1271.isValidSignature, (digest, signature)));
+            valid =
+                (success && result.length == 32 && abi.decode(result, (bytes4)) == IERC1271.isValidSignature.selector);
         }
     }
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        bytes memory signature
-    ) public {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, bytes memory signature) public {
         require(block.timestamp <= deadline, "SUsds/permit-expired");
         require(owner != address(0), "SUsds/invalid-owner");
 
         uint256 nonce;
-        unchecked { nonce = nonces[owner]++; }
+        unchecked {
+            nonce = nonces[owner]++;
+        }
 
-        bytes32 digest =
-            keccak256(abi.encodePacked(
+        bytes32 digest = keccak256(
+            abi.encodePacked(
                 "\x19\x01",
                 _calculateDomainSeparator(block.chainid),
-                keccak256(abi.encode(
-                    PERMIT_TYPEHASH,
-                    owner,
-                    spender,
-                    value,
-                    nonce,
-                    deadline
-                ))
-            ));
+                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonce, deadline))
+            )
+        );
 
         require(_isValidSignature(owner, digest, signature), "SUsds/invalid-permit");
 
@@ -1354,16 +1349,9 @@ contract SUsds is UUPSUpgradeable {
         emit Approval(owner, spender, value);
     }
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
         permit(owner, spender, value, deadline, abi.encodePacked(r, s, v));
     }
 }
-

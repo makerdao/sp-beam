@@ -2,8 +2,8 @@
 pragma solidity ^0.8.21;
 
 contract Usds {
-    mapping (address => uint256)                      public balanceOf;
-    mapping (address => mapping (address => uint256)) public allowance;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
 
     uint256 public totalSupply;
 
@@ -73,7 +73,7 @@ contract Usds {
 
         unchecked {
             balanceOf[from] = balance - value;
-            totalSupply     = totalSupply - value;
+            totalSupply = totalSupply - value;
         }
     }
 }

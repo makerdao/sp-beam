@@ -1,4 +1,3 @@
-
 pragma solidity ^0.8.24;
 
 contract Conv {
@@ -17,7 +16,6 @@ contract Conv {
         require(ray >= RAY, "Conv/ray-too-low");
 
         // Deliberately wrong implementation
-        return ((ray - RAY) * BPS * 365 days + RAY/2) / RAY;
+        return ((ray - RAY) * BPS * 365 days + RAY / 2) / RAY;
     }
 }
-
