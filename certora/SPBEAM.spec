@@ -1,6 +1,6 @@
-// DSPC.spec
+// SPBEAM.spec
 
-using DSPC as dspc;
+using SPBEAM as spbeam;
 using Conv as conv;
 using Jug as jug;
 using Pot as pot;
@@ -83,7 +83,7 @@ rule storage_affected(method f) {
     assert stepAfter != stepBefore => f.selector == sig:file(bytes32, bytes32, uint256).selector, "step[x] changed in an unexpected function";
     assert badAfter != badBefore => f.selector == sig:file(bytes32, uint256).selector, "bad changed in an unexpected function";
     assert tauAfter != tauBefore => f.selector == sig:file(bytes32, uint256).selector, "tau changed in an unexpected function";
-    assert tocAfter != tocBefore => f.selector == sig:file(bytes32, uint256).selector || f.selector == sig:set(DSPC.ParamChange[] calldata).selector, "toc changed in an unexpected function";
+    assert tocAfter != tocBefore => f.selector == sig:file(bytes32, uint256).selector || f.selector == sig:set(SPBEAM.ParamChange[] calldata).selector, "toc changed in an unexpected function";
 }
 
 // Verify that the correct storage changes for non-reverting rely
@@ -309,7 +309,7 @@ ghost mapping(uint256 => uint256) bps_to_ray {
 }
 
 // Verify correct storage changes for non-reverting set
-rule set(DSPC.ParamChange[] updates) {
+rule set(SPBEAM.ParamChange[] updates) {
     env e;
     bytes32 ilk;
     require ilk != DSR() && ilk != SSR();
@@ -392,7 +392,7 @@ ghost mapping(bytes32 => bool) set_item_reverted {
     init_state axiom forall bytes32 i. set_item_reverted[i] == false;
 }
 
-rule set_revert(DSPC.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss) {
+rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss) {
     env e;
     bytes32 ilk;
 
@@ -507,7 +507,7 @@ function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
 
 }
 
-rule set_current_higher_than_max(DSPC.ParamChange[] updates) {
+rule set_current_higher_than_max(SPBEAM.ParamChange[] updates) {
     env e;
 
     require updates.length == 1;
@@ -544,7 +544,7 @@ rule set_current_higher_than_max(DSPC.ParamChange[] updates) {
     assert id == ilk   => dutyAfter == bps_to_ray[bps] && bps >= max - step && bps <= max, "ilk duty not within bounds";
 }
 
-rule set_current_lower_than_min(DSPC.ParamChange[] updates) {
+rule set_current_lower_than_min(SPBEAM.ParamChange[] updates) {
     env e;
 
     require updates.length == 1;

@@ -39,8 +39,8 @@ jobs:
       - name: Install Certora
         run: pip3 install certora-cli-beta
 
-      - name: Certora verify DSPC
-        run: make certora-dspc
+      - name: Certora verify SPBEAM
+        run: make certora-spbeam
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
 
