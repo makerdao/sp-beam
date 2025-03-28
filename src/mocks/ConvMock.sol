@@ -20014,13 +20014,13 @@ contract ConvMock {
         rayToBps[1000000021979553151239153027] = 10000;
     }
 
-    function btor(uint256 bps) public virtual view returns (uint256 ray) {
+    function btor(uint256 bps) public view virtual returns (uint256 ray) {
         require(bps <= MAX_BPS_IN, "DSPC/bps-too-high");
         ray = bpsToRay[bps];
         require(ray != 0, "DSPC/out-of-bounds");
     }
 
-    function rtob(uint256 ray) public virtual view returns (uint256 bps) {
+    function rtob(uint256 ray) public view virtual returns (uint256 bps) {
         require(ray >= RAY, "DSPC/ray-too-low");
         bps = rayToBps[ray];
         // Check if it's in range
