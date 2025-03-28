@@ -18,11 +18,11 @@ pragma solidity ^0.8.24;
 
 import {DssTest, MCD} from "dss-test/DssTest.sol";
 import {DssInstance} from "dss-test/MCD.sol";
-import {DSPC} from "../DSPC.sol";
-import {DSPCMom} from "../DSPCMom.sol";
-import {DSPCDeploy, DSPCDeployParams} from "./DSPCDeploy.sol";
-import {DSPCInit, DSPCConfig, DSPCRateConfig} from "./DSPCInit.sol";
-import {DSPCInstance} from "./DSPCInstance.sol";
+import {SPBEAM} from "../SPBEAM.sol";
+import {SPBEAMMom} from "../SPBEAMMom.sol";
+import {SPBEAMDeploy, SPBEAMDeployParams} from "./SPBEAMDeploy.sol";
+import {SPBEAMInit, SPBEAMConfig, SPBEAMRateConfig} from "./SPBEAMInit.sol";
+import {SPBEAMInstance} from "./SPBEAMInstance.sol";
 import {ConvMock} from "../mocks/ConvMock.sol";
 
 interface RelyLike {
@@ -53,12 +53,12 @@ interface ProxyLike {
 }
 
 contract InitCaller {
-    function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) external {
-        DSPCInit.init(dss, inst, cfg);
+    function init(DssInstance memory dss, SPBEAMInstance memory inst, SPBEAMConfig memory cfg) external {
+        SPBEAMInit.init(dss, inst, cfg);
     }
 }
 
-contract DSPCInitTest is DssTest {
+contract SPBEAMInitTest is DssTest {
     address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
     address deployer = address(0xDE9);
     address owner = address(0x123);
@@ -69,7 +69,7 @@ contract DSPCInitTest is DssTest {
 
     DssInstance dss;
     ConvMock conv;
-    DSPCInstance inst;
+    SPBEAMInstance inst;
 
     function setUp() public {
         vm.createSelectFork("mainnet");
@@ -81,8 +81,8 @@ contract DSPCInitTest is DssTest {
         caller = new InitCaller();
 
         vm.startPrank(deployer);
-        inst = DSPCDeploy.deploy(
-            DSPCDeployParams({
+        inst = SPBEAMDeploy.deploy(
+            SPBEAMDeployParams({
                 deployer: deployer,
                 owner: address(pauseProxy),
                 jug: address(dss.jug),
@@ -96,10 +96,10 @@ contract DSPCInitTest is DssTest {
 
     function test_init() public {
         // Create test configuration
-        DSPCRateConfig[] memory ilks = new DSPCRateConfig[](2);
+        SPBEAMRateConfig[] memory ilks = new SPBEAMRateConfig[](2);
 
         // Configure ETH-A
-        ilks[0] = DSPCRateConfig({
+        ilks[0] = SPBEAMRateConfig({
             id: "ETH-A",
             min: uint16(0), // 0%
             max: uint16(1000), // 10%
@@ -107,41 +107,41 @@ contract DSPCInitTest is DssTest {
         });
 
         // Configure WBTC-A
-        ilks[1] = DSPCRateConfig({
+        ilks[1] = SPBEAMRateConfig({
             id: "WBTC-A",
             min: uint16(0), // 0%
             max: uint16(1500), // 15%
             step: uint16(100) // 1%
         });
 
-        DSPCConfig memory cfg = DSPCConfig({tau: 1 days, ilks: ilks, bud: address(0x0ddaf)});
+        SPBEAMConfig memory cfg = SPBEAMConfig({tau: 1 days, ilks: ilks, bud: address(0x0ddaf)});
 
         vm.prank(pause);
         pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
 
-        // Verify DSPCMom authority
-        assertEq(DSPCMom(inst.mom).authority(), dss.chainlog.getAddress("MCD_ADM"), "Wrong authority");
+        // Verify SPBEAMMom authority
+        assertEq(SPBEAMMom(inst.mom).authority(), dss.chainlog.getAddress("MCD_ADM"), "Wrong authority");
 
-        // Verify DSPC permissions
-        assertEq(DSPC(inst.dspc).wards(inst.mom), 1, "Mom not authorized in DSPC");
+        // Verify SPBEAM permissions
+        assertEq(SPBEAM(inst.spbeam).wards(inst.mom), 1, "Mom not authorized in SPBEAM");
 
         // Verify core contract permissions
-        assertEq(JugLike(address(dss.jug)).wards(inst.dspc), 1, "DSPC not authorized in Jug");
-        assertEq(PotLike(address(dss.pot)).wards(inst.dspc), 1, "DSPC not authorized in Pot");
-        assertEq(SUSDSLike(susds).wards(inst.dspc), 1, "DSPC not authorized in SUSDS");
+        assertEq(JugLike(address(dss.jug)).wards(inst.spbeam), 1, "SPBEAM not authorized in Jug");
+        assertEq(PotLike(address(dss.pot)).wards(inst.spbeam), 1, "SPBEAM not authorized in Pot");
+        assertEq(SUSDSLike(susds).wards(inst.spbeam), 1, "SPBEAM not authorized in SUSDS");
 
         // Verify configuration
-        assertEq(DSPC(inst.dspc).tau(), cfg.tau, "Wrong tau");
-        assertEq(DSPC(inst.dspc).buds(cfg.bud), 1, "Wrong bud");
+        assertEq(SPBEAM(inst.spbeam).tau(), cfg.tau, "Wrong tau");
+        assertEq(SPBEAM(inst.spbeam).buds(cfg.bud), 1, "Wrong bud");
 
         // Verify ETH-A config
-        (uint16 min, uint16 max, uint16 step) = DSPC(inst.dspc).cfgs("ETH-A");
+        (uint16 min, uint16 max, uint16 step) = SPBEAM(inst.spbeam).cfgs("ETH-A");
         assertEq(min, ilks[0].min, "Wrong ETH-A min");
         assertEq(max, ilks[0].max, "Wrong ETH-A max");
         assertEq(step, ilks[0].step, "Wrong ETH-A step");
 
         // Verify WBTC-A config
-        (min, max, step) = DSPC(inst.dspc).cfgs("WBTC-A");
+        (min, max, step) = SPBEAM(inst.spbeam).cfgs("WBTC-A");
         assertEq(min, ilks[1].min, "Wrong WBTC-A min");
         assertEq(max, ilks[1].max, "Wrong WBTC-A max");
         assertEq(step, ilks[1].step, "Wrong WBTC-A step");

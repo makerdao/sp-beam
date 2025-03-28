@@ -16,7 +16,7 @@
 
 pragma solidity ^0.8.24;
 
-struct DSPCInstance {
-    address dspc;
+struct SPBEAMInstance {
+    address spbeam;
     address mom;
 }
