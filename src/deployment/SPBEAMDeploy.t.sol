@@ -4,10 +4,10 @@
 pragma solidity ^0.8.24;
 
 import "dss-test/DssTest.sol";
-import {DSPC} from "../DSPC.sol";
-import {DSPCMom} from "../DSPCMom.sol";
-import {DSPCDeploy, DSPCDeployParams} from "./DSPCDeploy.sol";
-import {DSPCInstance} from "./DSPCInstance.sol";
+import {SPBEAM} from "../SPBEAM.sol";
+import {SPBEAMMom} from "../SPBEAMMom.sol";
+import {SPBEAMDeploy, SPBEAMDeployParams} from "./SPBEAMDeploy.sol";
+import {SPBEAMInstance} from "./SPBEAMInstance.sol";
 import {ConvMock} from "../mocks/ConvMock.sol";
 
 interface JugLike {
@@ -22,7 +22,7 @@ interface SUSDSLike {
     function wards(address) external view returns (uint256);
 }
 
-contract DSPCDeployTest is DssTest {
+contract SPBEAMDeployTest is DssTest {
     address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
     address susds;
     address deployer = address(0xDE9);
@@ -30,7 +30,7 @@ contract DSPCDeployTest is DssTest {
 
     DssInstance dss;
     ConvMock conv;
-    DSPCInstance inst;
+    SPBEAMInstance inst;
 
     function setUp() public {
         vm.createSelectFork("mainnet");
@@ -41,8 +41,8 @@ contract DSPCDeployTest is DssTest {
 
     function test_deploy() public {
         vm.startPrank(deployer);
-        inst = DSPCDeploy.deploy(
-            DSPCDeployParams({
+        inst = SPBEAMDeploy.deploy(
+            SPBEAMDeployParams({
                 deployer: deployer,
                 owner: owner,
                 jug: address(dss.jug),
@@ -53,19 +53,19 @@ contract DSPCDeployTest is DssTest {
         );
         vm.stopPrank();
 
-        // Verify DSPC deployment
-        assertTrue(inst.dspc != address(0), "DSPC not deployed");
-        assertEq(address(DSPC(inst.dspc).jug()), address(dss.jug), "Wrong jug");
-        assertEq(address(DSPC(inst.dspc).pot()), address(dss.pot), "Wrong pot");
-        assertEq(address(DSPC(inst.dspc).susds()), susds, "Wrong susds");
-        assertEq(address(DSPC(inst.dspc).conv()), address(conv), "Wrong conv");
+        // Verify SPBEAM deployment
+        assertTrue(inst.spbeam != address(0), "SPBEAM not deployed");
+        assertEq(address(SPBEAM(inst.spbeam).jug()), address(dss.jug), "Wrong jug");
+        assertEq(address(SPBEAM(inst.spbeam).pot()), address(dss.pot), "Wrong pot");
+        assertEq(address(SPBEAM(inst.spbeam).susds()), susds, "Wrong susds");
+        assertEq(address(SPBEAM(inst.spbeam).conv()), address(conv), "Wrong conv");
 
-        // Verify DSPCMom deployment
-        assertTrue(inst.mom != address(0), "DSPCMom not deployed");
-        assertEq(DSPCMom(inst.mom).owner(), owner, "Wrong mom owner");
+        // Verify SPBEAMMom deployment
+        assertTrue(inst.mom != address(0), "SPBEAMMom not deployed");
+        assertEq(SPBEAMMom(inst.mom).owner(), owner, "Wrong mom owner");
 
         // Verify ownership transfer
-        assertEq(DSPC(inst.dspc).wards(owner), 1, "Owner not authorized in DSPC");
-        assertEq(DSPC(inst.dspc).wards(deployer), 0, "Deployer still authorized in DSPC");
+        assertEq(SPBEAM(inst.spbeam).wards(owner), 1, "Owner not authorized in SPBEAM");
+        assertEq(SPBEAM(inst.spbeam).wards(deployer), 0, "Deployer still authorized in SPBEAM");
     }
 }

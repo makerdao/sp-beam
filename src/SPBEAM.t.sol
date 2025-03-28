@@ -16,12 +16,12 @@
 pragma solidity ^0.8.24;
 
 import "dss-test/DssTest.sol";
-import {DSPC} from "./DSPC.sol";
-import {DSPCMom} from "./DSPCMom.sol";
+import {SPBEAM} from "./SPBEAM.sol";
+import {SPBEAMMom} from "./SPBEAMMom.sol";
 import {ConvMock} from "./mocks/ConvMock.sol";
-import {DSPCDeploy, DSPCDeployParams} from "./deployment/DSPCDeploy.sol";
-import {DSPCInit, DSPCConfig, DSPCRateConfig} from "./deployment/DSPCInit.sol";
-import {DSPCInstance} from "./deployment/DSPCInstance.sol";
+import {SPBEAMDeploy, SPBEAMDeployParams} from "./deployment/SPBEAMDeploy.sol";
+import {SPBEAMInit, SPBEAMConfig, SPBEAMRateConfig} from "./deployment/SPBEAMInit.sol";
+import {SPBEAMInstance} from "./deployment/SPBEAMInstance.sol";
 
 interface ConvLike {
     function btor(uint256 bps) external pure returns (uint256 ray);
@@ -38,8 +38,8 @@ interface ProxyLike {
 }
 
 contract InitCaller {
-    function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) external {
-        DSPCInit.init(dss, inst, cfg);
+    function init(DssInstance memory dss, SPBEAMInstance memory inst, SPBEAMConfig memory cfg) external {
+        SPBEAMInit.init(dss, inst, cfg);
     }
 }
 
@@ -49,12 +49,12 @@ contract MockBrokenConv is ConvMock {
     }
 }
 
-contract DSPCTest is DssTest {
+contract SPBEAMTest is DssTest {
     address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
     DssInstance dss;
-    DSPC dspc;
-    DSPCMom mom;
+    SPBEAM beam;
+    SPBEAMMom mom;
     ConvLike conv;
     SUSDSLike susds;
     address pause;
@@ -83,8 +83,8 @@ contract DSPCTest is DssTest {
 
         conv = ConvLike(address(new ConvMock()));
 
-        DSPCInstance memory inst = DSPCDeploy.deploy(
-            DSPCDeployParams({
+        SPBEAMInstance memory inst = SPBEAMDeploy.deploy(
+            SPBEAMDeployParams({
                 deployer: address(this),
                 owner: address(pauseProxy),
                 jug: address(dss.jug),
@@ -93,14 +93,14 @@ contract DSPCTest is DssTest {
                 conv: address(conv)
             })
         );
-        dspc = DSPC(inst.dspc);
-        mom = DSPCMom(inst.mom);
+        beam = SPBEAM(inst.spbeam);
+        mom = SPBEAMMom(inst.mom);
 
         // Initialize deployment
-        DSPCRateConfig[] memory ilks = new DSPCRateConfig[](3); // ETH-A, DSR, SSR
+        SPBEAMRateConfig[] memory ilks = new SPBEAMRateConfig[](3); // ETH-A, DSR, SSR
 
         // Configure ETH-A
-        ilks[0] = DSPCRateConfig({
+        ilks[0] = SPBEAMRateConfig({
             id: ILK, // Use the constant bytes32 ILK
             min: uint16(1),
             max: uint16(3000),
@@ -108,7 +108,7 @@ contract DSPCTest is DssTest {
         });
 
         // Configure DSR
-        ilks[1] = DSPCRateConfig({
+        ilks[1] = SPBEAMRateConfig({
             id: DSR, // Use the constant bytes32 DSR
             min: uint16(1),
             max: uint16(3000),
@@ -116,14 +116,14 @@ contract DSPCTest is DssTest {
         });
 
         // Configure SSR
-        ilks[2] = DSPCRateConfig({
+        ilks[2] = SPBEAMRateConfig({
             id: SSR, // Use the constant bytes32 SSR
             min: uint16(1),
             max: uint16(3000),
             step: uint16(100)
         });
 
-        DSPCConfig memory cfg = DSPCConfig({
+        SPBEAMConfig memory cfg = SPBEAMConfig({
             tau: 0, // Start with tau = 0 for tests
             ilks: ilks,
             bud: bud
@@ -133,88 +133,88 @@ contract DSPCTest is DssTest {
     }
 
     function test_constructor() public view {
-        assertEq(address(dspc.jug()), address(dss.jug));
-        assertEq(address(dspc.pot()), address(dss.pot));
-        assertEq(address(dspc.susds()), address(susds));
-        assertEq(address(dspc.conv()), address(conv));
+        assertEq(address(beam.jug()), address(dss.jug));
+        assertEq(address(beam.pot()), address(dss.pot));
+        assertEq(address(beam.susds()), address(susds));
+        assertEq(address(beam.conv()), address(conv));
 
         // init
-        assertEq(dspc.wards(address(this)), 0);
-        assertEq(dspc.wards(address(pauseProxy)), 1);
-        assertEq(dspc.wards(address(mom)), 1);
+        assertEq(beam.wards(address(this)), 0);
+        assertEq(beam.wards(address(pauseProxy)), 1);
+        assertEq(beam.wards(address(mom)), 1);
         assertEq(mom.authority(), dss.chainlog.getAddress("MCD_ADM"));
-        assertEq(dss.jug.wards(address(dspc)), 1);
-        assertEq(dss.pot.wards(address(dspc)), 1);
-        assertEq(SUSDSLike(dss.chainlog.getAddress("SUSDS")).wards(address(dspc)), 1);
+        assertEq(dss.jug.wards(address(beam)), 1);
+        assertEq(dss.pot.wards(address(beam)), 1);
+        assertEq(SUSDSLike(dss.chainlog.getAddress("SUSDS")).wards(address(beam)), 1);
     }
 
     function test_auth() public {
-        checkAuth(address(dspc), "DSPC");
+        checkAuth(address(beam), "SPBEAM");
     }
 
     function test_auth_methods() public {
-        checkModifier(address(dspc), "DSPC/not-authorized", [DSPC.kiss.selector, DSPC.diss.selector]);
+        checkModifier(address(beam), "SPBEAM/not-authorized", [SPBEAM.kiss.selector, SPBEAM.diss.selector]);
     }
 
     function test_toll_methods() public {
-        checkModifier(address(dspc), "DSPC/not-facilitator", [DSPC.set.selector]);
+        checkModifier(address(beam), "SPBEAM/not-facilitator", [SPBEAM.set.selector]);
     }
 
     function test_good_methods() public {
         vm.startPrank(address(pauseProxy));
-        dspc.file("bad", 1);
-        dspc.kiss(address(this));
+        beam.file("bad", 1);
+        beam.kiss(address(this));
         vm.stopPrank();
 
-        checkModifier(address(dspc), "DSPC/module-halted", [DSPC.set.selector]);
+        checkModifier(address(beam), "SPBEAM/module-halted", [SPBEAM.set.selector]);
     }
 
     function test_kiss() public {
         address who = address(0x0ddaf);
-        assertEq(dspc.buds(who), 0);
+        assertEq(beam.buds(who), 0);
 
         vm.prank(address(pauseProxy));
         vm.expectEmit(true, true, true, true);
         emit Kiss(who);
-        dspc.kiss(who);
-        assertEq(dspc.buds(who), 1);
+        beam.kiss(who);
+        assertEq(beam.buds(who), 1);
     }
 
     function test_diss() public {
         address who = address(0x0ddaf);
         vm.prank(address(pauseProxy));
-        dspc.kiss(who);
-        assertEq(dspc.buds(who), 1);
+        beam.kiss(who);
+        assertEq(beam.buds(who), 1);
 
         vm.prank(address(pauseProxy));
         vm.expectEmit(true, true, true, true);
         emit Diss(who);
-        dspc.diss(who);
-        assertEq(dspc.buds(who), 0);
+        beam.diss(who);
+        assertEq(beam.buds(who), 0);
     }
 
     function test_file() public {
-        checkFileUint(address(dspc), "DSPC", ["bad", "tau", "toc"]);
+        checkFileUint(address(beam), "SPBEAM", ["bad", "tau", "toc"]);
 
         vm.startPrank(address(pauseProxy));
 
-        vm.expectRevert("DSPC/invalid-bad-value");
-        dspc.file("bad", 2);
+        vm.expectRevert("SPBEAM/invalid-bad-value");
+        beam.file("bad", 2);
 
-        vm.expectRevert("DSPC/invalid-tau-value");
-        dspc.file("tau", uint256(type(uint64).max) + 1);
+        vm.expectRevert("SPBEAM/invalid-tau-value");
+        beam.file("tau", uint256(type(uint64).max) + 1);
 
-        vm.expectRevert("DSPC/invalid-toc-value");
-        dspc.file("toc", uint256(type(uint128).max) + 1);
+        vm.expectRevert("SPBEAM/invalid-toc-value");
+        beam.file("toc", uint256(type(uint128).max) + 1);
 
         vm.stopPrank();
 
-        vm.expectRevert("DSPC/not-authorized");
-        dspc.file("bad", 1);
+        vm.expectRevert("SPBEAM/not-authorized");
+        beam.file("bad", 1);
     }
 
     function test_file_ilk() public {
-        (uint16 min, uint16 max, uint16 step) = dspc.cfgs(ILK);
+        (uint16 min, uint16 max, uint16 step) = beam.cfgs(ILK);
         assertEq(min, 1);
         assertEq(max, 3000);
         assertEq(step, 100);
@@ -223,12 +223,12 @@ contract DSPCTest is DssTest {
 
         vm.expectEmit(true, true, true, true);
         emit File(ILK, "min", 100);
-        dspc.file(ILK, "min", 100);
-        dspc.file(ILK, "max", 3000);
-        dspc.file(ILK, "step", 420);
+        beam.file(ILK, "min", 100);
+        beam.file(ILK, "max", 3000);
+        beam.file(ILK, "step", 420);
         vm.stopPrank();
 
-        (min, max, step) = dspc.cfgs(ILK);
+        (min, max, step) = beam.cfgs(ILK);
         assertEq(min, 100);
         assertEq(max, 3000);
         assertEq(step, 420);
@@ -236,39 +236,39 @@ contract DSPCTest is DssTest {
 
     function test_revert_file_ilk_invalid() public {
         vm.startPrank(address(pauseProxy));
-        (uint16 min, uint16 max,) = dspc.cfgs(ILK);
+        (uint16 min, uint16 max,) = beam.cfgs(ILK);
 
-        vm.expectRevert("DSPC/min-too-high");
-        dspc.file(ILK, "min", max + 1);
+        vm.expectRevert("SPBEAM/min-too-high");
+        beam.file(ILK, "min", max + 1);
 
-        vm.expectRevert("DSPC/max-too-low");
-        dspc.file(ILK, "max", min - 1);
+        vm.expectRevert("SPBEAM/max-too-low");
+        beam.file(ILK, "max", min - 1);
 
-        vm.expectRevert("DSPC/file-unrecognized-param");
-        dspc.file(ILK, "unknown", 100);
+        vm.expectRevert("SPBEAM/file-unrecognized-param");
+        beam.file(ILK, "unknown", 100);
 
-        vm.expectRevert("DSPC/invalid-value");
-        dspc.file(ILK, "max", uint256(type(uint16).max) + 1);
+        vm.expectRevert("SPBEAM/invalid-value");
+        beam.file(ILK, "max", uint256(type(uint16).max) + 1);
 
         dss.jug.drip("MOG-A");
-        vm.expectRevert("DSPC/ilk-not-initialized");
-        dspc.file("MOG-A", "min", 100);
+        vm.expectRevert("SPBEAM/ilk-not-initialized");
+        beam.file("MOG-A", "min", 100);
 
         vm.stopPrank();
 
-        vm.expectRevert("DSPC/not-authorized");
-        dspc.file(ILK, "min", 100);
+        vm.expectRevert("SPBEAM/not-authorized");
+        beam.file(ILK, "min", 100);
     }
 
     function test_set_ilk() public {
         (uint256 duty,) = dss.jug.ilks(ILK);
         uint256 target = conv.rtob(duty) + 50;
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, target);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, target);
 
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
 
         (duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(target));
@@ -277,11 +277,11 @@ contract DSPCTest is DssTest {
     function test_set_dsr() public {
         uint256 target = conv.rtob(dss.pot.dsr()) + 50;
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(DSR, target);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(DSR, target);
 
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
 
         assertEq(dss.pot.dsr(), conv.btor(target));
     }
@@ -290,14 +290,14 @@ contract DSPCTest is DssTest {
         vm.prank(bud);
         uint256 target = conv.rtob(susds.ssr()) - 50;
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(SSR, target);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(SSR, target);
 
         vm.prank(bud);
 
         vm.expectEmit(true, true, true, true);
         emit Set(SSR, target);
-        dspc.set(updates);
+        beam.set(updates);
 
         assertEq(susds.ssr(), conv.btor(target));
     }
@@ -308,13 +308,13 @@ contract DSPCTest is DssTest {
         uint256 dsrTarget = conv.rtob(dss.pot.dsr()) - 50;
         uint256 ssrTarget = conv.rtob(susds.ssr()) + 50;
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](3);
-        updates[0] = DSPC.ParamChange(DSR, dsrTarget);
-        updates[1] = DSPC.ParamChange(ILK, ilkTarget);
-        updates[2] = DSPC.ParamChange(SSR, ssrTarget);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](3);
+        updates[0] = SPBEAM.ParamChange(DSR, dsrTarget);
+        updates[1] = SPBEAM.ParamChange(ILK, ilkTarget);
+        updates[2] = SPBEAM.ParamChange(SSR, ssrTarget);
 
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
 
         (duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(ilkTarget));
@@ -328,11 +328,11 @@ contract DSPCTest is DssTest {
         vm.prank(address(pauseProxy));
         dss.jug.file(ILK, "duty", conv.btor(3050)); // outside range
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 2999);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, 2999);
 
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
 
         (uint256 duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(2999));
@@ -342,10 +342,10 @@ contract DSPCTest is DssTest {
         vm.prank(address(pauseProxy));
         dss.jug.file(ILK, "duty", conv.btor(0)); // outside range
 
-        updates[0] = DSPC.ParamChange(ILK, 50);
+        updates[0] = SPBEAM.ParamChange(ILK, 50);
 
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
 
         (duty,) = dss.jug.ilks(ILK);
         assertEq(duty, conv.btor(50));
@@ -354,92 +354,92 @@ contract DSPCTest is DssTest {
     function test_revert_set_duplicate() public {
         (uint256 duty,) = dss.jug.ilks(ILK);
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
-        updates[0] = DSPC.ParamChange(ILK, conv.rtob(duty) - 100);
-        updates[1] = DSPC.ParamChange(ILK, conv.rtob(duty) - 200); // duplicate, pushing rate beyond step
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](2);
+        updates[0] = SPBEAM.ParamChange(ILK, conv.rtob(duty) - 100);
+        updates[1] = SPBEAM.ParamChange(ILK, conv.rtob(duty) - 200); // duplicate, pushing rate beyond step
 
         vm.prank(bud);
-        vm.expectRevert("DSPC/updates-out-of-order");
-        dspc.set(updates);
+        vm.expectRevert("SPBEAM/updates-out-of-order");
+        beam.set(updates);
     }
 
     function test_revert_set_not_configured_rate() public {
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange("PEPE-A", 10000);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange("PEPE-A", 10000);
 
         vm.prank(bud);
-        vm.expectRevert("DSPC/rate-not-configured");
-        dspc.set(updates);
+        vm.expectRevert("SPBEAM/rate-not-configured");
+        beam.set(updates);
     }
 
     function test_revert_set_empty() public {
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](0);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](0);
 
-        vm.expectRevert("DSPC/empty-batch");
+        vm.expectRevert("SPBEAM/empty-batch");
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
     }
 
     function test_revert_set_unauthorized() public {
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 100);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, 100);
 
-        vm.expectRevert("DSPC/not-facilitator");
-        dspc.set(updates);
+        vm.expectRevert("SPBEAM/not-facilitator");
+        beam.set(updates);
     }
 
     function test_revert_set_below_min() public {
         vm.prank(address(pauseProxy));
-        dspc.file(ILK, "min", 100);
+        beam.file(ILK, "min", 100);
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 50);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, 50);
 
-        vm.expectRevert("DSPC/below-min");
+        vm.expectRevert("SPBEAM/below-min");
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
     }
 
     function test_revert_set_above_max() public {
         vm.prank(address(pauseProxy));
-        dspc.file(ILK, "max", 100);
+        beam.file(ILK, "max", 100);
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 150);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, 150);
 
-        vm.expectRevert("DSPC/above-max");
+        vm.expectRevert("SPBEAM/above-max");
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
     }
 
     function test_revert_set_delta_above_step() public {
         vm.prank(address(pauseProxy));
-        dspc.file(ILK, "step", 100);
+        beam.file(ILK, "step", 100);
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, 100);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, 100);
 
-        vm.expectRevert("DSPC/delta-above-step");
+        vm.expectRevert("SPBEAM/delta-above-step");
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
     }
 
     function test_revert_set_before_cooldown() public {
         vm.prank(address(pauseProxy));
-        dspc.file("tau", 100);
+        beam.file("tau", 100);
         uint256 currentDSR = conv.rtob(dss.pot.dsr());
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(DSR, currentDSR + 1);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(DSR, currentDSR + 1);
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
 
         vm.warp(block.timestamp + 99);
 
-        updates[0] = DSPC.ParamChange(DSR, currentDSR + 2);
+        updates[0] = SPBEAM.ParamChange(DSR, currentDSR + 2);
         vm.prank(bud);
-        vm.expectRevert("DSPC/too-early");
-        dspc.set(updates);
+        vm.expectRevert("SPBEAM/too-early");
+        beam.set(updates);
     }
 
     function test_revert_set_malfunctioning_conv() public {
@@ -449,11 +449,11 @@ contract DSPCTest is DssTest {
         (uint256 duty,) = dss.jug.ilks(ILK);
         uint256 target = conv.rtob(duty) + 50;
 
-        DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](1);
-        updates[0] = DSPC.ParamChange(ILK, target);
+        SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](1);
+        updates[0] = SPBEAM.ParamChange(ILK, target);
 
-        vm.expectRevert("DSPC/invalid-rate-conv");
+        vm.expectRevert("SPBEAM/invalid-rate-conv");
         vm.prank(bud);
-        dspc.set(updates);
+        beam.set(updates);
     }
 }

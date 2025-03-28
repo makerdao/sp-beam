@@ -39,14 +39,14 @@ interface ConvLike {
     function rtob(uint256 ray) external pure returns (uint256 bps);
 }
 
-/// @title Direct Stability Parameters Change Module (DSPC)
+/// @title Stability Parameter Bounded External Access Module (SP-BEAM)
 /// @notice A module for managing protocol stability parameters with configurable constraints and safety checks
 /// @dev Provides controlled access to modify stability parameters (ilk stability fees, DSR, SSR) with:
 ///      - Configurable min/max bounds and step sizes for each parameter
 ///      - Cooldown periods between updates
 ///      - Ordered batch updates
 ///      - Emergency circuit breaker
-contract DSPC {
+contract SPBEAM {
     // --- Structs ---
     /// @notice Configuration for a rate parameter's constraints
     /// @dev All values are in basis points (1 bp = 0.01%)
@@ -133,21 +133,21 @@ contract DSPC {
 
     // --- Modifiers ---
     modifier auth() {
-        require(wards[msg.sender] == 1, "DSPC/not-authorized");
+        require(wards[msg.sender] == 1, "SPBEAM/not-authorized");
         _;
     }
 
     modifier toll() {
-        require(buds[msg.sender] == 1, "DSPC/not-facilitator");
+        require(buds[msg.sender] == 1, "SPBEAM/not-facilitator");
         _;
     }
 
     modifier good() {
-        require(bad == 0, "DSPC/module-halted");
+        require(bad == 0, "SPBEAM/module-halted");
         _;
     }
 
-    /// @notice Initialize the DSPC module with core system contracts
+    /// @notice Initialize the SPBEAM module with core system contracts
     /// @param _jug Jug contract for stability fee management
     /// @param _pot Pot contract for Dai Savings Rate (DSR)
     /// @param _susds SUSDS contract for Sky Savings Rate (SSR)
@@ -204,16 +204,16 @@ contract DSPC {
     ///      - toc: Last update timestamp (set automatically)
     function file(bytes32 what, uint256 data) external auth {
         if (what == "bad") {
-            require(data == 0 || data == 1, "DSPC/invalid-bad-value");
+            require(data == 0 || data == 1, "SPBEAM/invalid-bad-value");
             bad = uint8(data);
         } else if (what == "tau") {
-            require(data <= type(uint64).max, "DSPC/invalid-tau-value");
+            require(data <= type(uint64).max, "SPBEAM/invalid-tau-value");
             tau = uint64(data);
         } else if (what == "toc") {
-            require(data <= type(uint128).max, "DSPC/invalid-toc-value");
+            require(data <= type(uint128).max, "SPBEAM/invalid-toc-value");
             toc = uint128(data);
         } else {
-            revert("DSPC/file-unrecognized-param");
+            revert("SPBEAM/file-unrecognized-param");
         }
 
         emit File(what, data);
@@ -233,19 +233,19 @@ contract DSPC {
     function file(bytes32 id, bytes32 what, uint256 data) external auth {
         if (id != "DSR" && id != "SSR") {
             (uint256 duty,) = jug.ilks(id);
-            require(duty > 0, "DSPC/ilk-not-initialized");
+            require(duty > 0, "SPBEAM/ilk-not-initialized");
         }
-        require(data <= type(uint16).max, "DSPC/invalid-value");
+        require(data <= type(uint16).max, "SPBEAM/invalid-value");
         if (what == "min") {
-            require(data <= cfgs[id].max, "DSPC/min-too-high");
+            require(data <= cfgs[id].max, "SPBEAM/min-too-high");
             cfgs[id].min = uint16(data);
         } else if (what == "max") {
-            require(data >= cfgs[id].min, "DSPC/max-too-low");
+            require(data >= cfgs[id].min, "SPBEAM/max-too-low");
             cfgs[id].max = uint16(data);
         } else if (what == "step") {
             cfgs[id].step = uint16(data);
         } else {
-            revert("DSPC/file-unrecognized-param");
+            revert("SPBEAM/file-unrecognized-param");
         }
 
         emit File(id, what, data);
@@ -260,34 +260,34 @@ contract DSPC {
     ///      4. Ensures updates are properly ordered to prevent duplicates
     ///      5. Calls drip() before each update to accrue fees
     /// @dev Reverts if:
-    ///      - Caller not authorized (DSPC/not-facilitator)
-    ///      - Module halted, bad = 1 (DSPC/module-halted)
-    ///      - Empty updates array (DSPC/empty-batch)
-    ///      - Cooldown period not elapsed (DSPC/too-early)
-    ///      - Updates not ordered alphabetically by id (DSPC/updates-out-of-order)
-    ///      - Rate not configured, step = 0 (DSPC/rate-not-configured)
-    ///      - New rate < min (DSPC/below-min)
-    ///      - New rate > max (DSPC/above-max)
-    ///      - Rate change > step (DSPC/delta-above-step)
-    ///      - Rate conversion failed (DSPC/invalid-rate-conv)
+    ///      - Caller not authorized (SPBEAM/not-facilitator)
+    ///      - Module halted, bad = 1 (SPBEAM/module-halted)
+    ///      - Empty updates array (SPBEAM/empty-batch)
+    ///      - Cooldown period not elapsed (SPBEAM/too-early)
+    ///      - Updates not ordered alphabetically by id (SPBEAM/updates-out-of-order)
+    ///      - Rate not configured, step = 0 (SPBEAM/rate-not-configured)
+    ///      - New rate < min (SPBEAM/below-min)
+    ///      - New rate > max (SPBEAM/above-max)
+    ///      - Rate change > step (SPBEAM/delta-above-step)
+    ///      - Rate conversion failed (SPBEAM/invalid-rate-conv)
     function set(ParamChange[] calldata updates) external toll good {
-        require(updates.length > 0, "DSPC/empty-batch");
-        require(block.timestamp >= tau + toc, "DSPC/too-early");
+        require(updates.length > 0, "SPBEAM/empty-batch");
+        require(block.timestamp >= tau + toc, "SPBEAM/too-early");
         toc = uint128(block.timestamp);
 
         bytes32 last;
         for (uint256 i = 0; i < updates.length; i++) {
             bytes32 id = updates[i].id;
 
-            require(id > last, "DSPC/updates-out-of-order");
+            require(id > last, "SPBEAM/updates-out-of-order");
             last = id;
 
             uint256 bps = updates[i].bps;
             Cfg memory cfg = cfgs[id];
 
-            require(cfg.step > 0, "DSPC/rate-not-configured");
-            require(bps >= cfg.min, "DSPC/below-min");
-            require(bps <= cfg.max, "DSPC/above-max");
+            require(cfg.step > 0, "SPBEAM/rate-not-configured");
+            require(bps >= cfg.min, "SPBEAM/below-min");
+            require(bps <= cfg.max, "SPBEAM/above-max");
 
             // Check rate change is within allowed gap
             uint256 oldBps;
@@ -308,11 +308,11 @@ contract DSPC {
 
             // Calculates absolute difference between the old and the new rate
             uint256 delta = bps > oldBps ? bps - oldBps : oldBps - bps;
-            require(delta <= cfg.step, "DSPC/delta-above-step");
+            require(delta <= cfg.step, "SPBEAM/delta-above-step");
 
             // Execute the update
             uint256 ray = conv.btor(bps);
-            require(ray >= RAY, "DSPC/invalid-rate-conv");
+            require(ray >= RAY, "SPBEAM/invalid-rate-conv");
             if (id == "DSR") {
                 pot.drip();
                 pot.file("dsr", ray);

@@ -1,10 +1,10 @@
-# Direct Stability Parameters Change Module (DSPC)
+# Stability Parameter Bounded External Access Module (SP-BEAM)
 
 A module for the Sky Protocol that enables direct changes to stability parameters (duty, dsr, ssr) through a simple, secure interface with proper constraints and timelocks.
 
 ## Overview
 
-The DSPC module provides a streamlined way to modify stability parameters in the Maker Protocol, including:
+The SP-BEAM module provides a streamlined way to modify stability parameters in the Maker Protocol, including:
 - Stability fees (duty) for different collateral types via the Jug contract
 - Dai Savings Rate (DSR) via the Pot contract
 - Sky Savings Rate (SSR) via the sUSDS contract
@@ -37,7 +37,7 @@ forge test
 
 1. Deploy the contract with the required addresses:
 ```solidity
-DSPC dspc = new DSPC(
+SPBEAM beam = new SPBEAM(
     jugAddress,  // For stability fees
     potAddress,  // For DSR
     susdsAddress, // For SSR
@@ -48,30 +48,30 @@ DSPC dspc = new DSPC(
 2. Configure the module parameters:
 ```solidity
 // Set timelock duration
-dspc.file("tau", 1 days);
+beam.file("tau", 1 days);
 
 // Configure constraints for a collateral type
-dspc.file("ETH-A", "max", 1000);  // Max rate: 10%
-dspc.file("ETH-A", "min", 1);     // Min rate: 0.01%
-dspc.file("ETH-A", "step", 100);  // Max change: 1%
+beam.file("ETH-A", "max", 1000);  // Max rate: 10%
+beam.file("ETH-A", "min", 1);     // Min rate: 0.01%
+beam.file("ETH-A", "step", 100);  // Max change: 1%
 
 // Configure constraints for DSR
-dspc.file("DSR", "max", 800);  // Max rate: 8%
-dspc.file("DSR", "min", 1);    // Min rate: 0.01%
-dspc.file("DSR", "step", 100); // Max change: 1%
+beam.file("DSR", "max", 800);  // Max rate: 8%
+beam.file("DSR", "min", 1);    // Min rate: 0.01%
+beam.file("DSR", "step", 100); // Max change: 1%
 ```
 
 3. Add facilitators who can propose and execute rate changes:
 ```solidity
-dspc.kiss(facilitatorAddress);
+beam.kiss(facilitatorAddress);
 ```
 
 4. Execute a batch of rate changes:
 ```solidity
-DSPC.ParamChange[] memory updates = new DSPC.ParamChange[](2);
-updates[0] = DSPC.ParamChange("DSR", 75);     // Set DSR to 0.75%
-updates[1] = DSPC.ParamChange("ETH-A", 150);  // Set ETH-A rate to 1.5%
-dspc.set(updates);
+SPBEAM.ParamChange[] memory updates = new SPBEAM.ParamChange[](2);
+updates[0] = SPBEAM.ParamChange("DSR", 75);     // Set DSR to 0.75%
+updates[1] = SPBEAM.ParamChange("ETH-A", 150);  // Set ETH-A rate to 1.5%
+beam.set(updates);
 ```
 
 ## Security
@@ -79,7 +79,7 @@ dspc.set(updates);
 The module implements a robust security model:
 - Two-level access control (admins and facilitators)
 - Rate constraints to prevent extreme changes
-- Disabling without GSM delay via DSPCMom contract
+- Disabling without GSM delay via SPBEAMMom contract
 - Circuit breaker (halt) functionality
 - All actions emit events for transparency
 

@@ -19,21 +19,21 @@ import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {MCD, DssInstance} from "dss-test/MCD.sol";
 import {ScriptTools} from "dss-test/ScriptTools.sol";
-import {DSPCDeploy, DSPCDeployParams} from "src/deployment/DSPCDeploy.sol";
-import {DSPCInstance} from "src/deployment/DSPCInstance.sol";
+import {SPBEAMDeploy, SPBEAMDeployParams} from "src/deployment/SPBEAMDeploy.sol";
+import {SPBEAMInstance} from "src/deployment/SPBEAMInstance.sol";
 
-contract DSPCDeployScript is Script {
+contract SPBEAMDeployScript is Script {
     using stdJson for string;
     using ScriptTools for string;
 
-    string constant NAME = "dspc-deploy";
+    string constant NAME = "spbeam-deploy";
     string config;
 
     address constant CHAINLOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
     DssInstance dss = MCD.loadFromChainlog(CHAINLOG);
     address pauseProxy = dss.chainlog.getAddress("MCD_PAUSE_PROXY");
     address conv;
-    DSPCInstance inst;
+    SPBEAMInstance inst;
 
     function run() external {
         config = ScriptTools.loadConfig();
@@ -41,8 +41,8 @@ contract DSPCDeployScript is Script {
 
         vm.startBroadcast();
 
-        inst = DSPCDeploy.deploy(
-            DSPCDeployParams({
+        inst = SPBEAMDeploy.deploy(
+            SPBEAMDeployParams({
                 deployer: msg.sender,
                 owner: pauseProxy,
                 jug: address(dss.jug),
@@ -54,7 +54,7 @@ contract DSPCDeployScript is Script {
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(NAME, "dspc", address(inst.dspc));
+        ScriptTools.exportContract(NAME, "spbeam", address(inst.spbeam));
         ScriptTools.exportContract(NAME, "mom", address(inst.mom));
         ScriptTools.exportContract(NAME, "conv", conv);
     }

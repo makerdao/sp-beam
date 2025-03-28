@@ -17,25 +17,25 @@
 pragma solidity ^0.8.24;
 
 import {DssInstance} from "dss-test/MCD.sol";
-import {DSPCInstance} from "./DSPCInstance.sol";
+import {SPBEAMInstance} from "./SPBEAMInstance.sol";
 
 interface RelyLike {
     function rely(address usr) external;
 }
 
-interface DSPCLike is RelyLike {
+interface SPBEAMLike is RelyLike {
     function file(bytes32 what, uint256 data) external;
     function file(bytes32 ilk, bytes32 what, uint256 data) external;
     function kiss(address usr) external;
 }
 
-interface DSPCMomLike {
+interface SPBEAMMomLike {
     function setAuthority(address usr) external;
 }
 
-/// @title Configuration parameters for a rate in DSPC
+/// @title Configuration parameters for a rate in SPBEAM
 /// @dev Used to configure rate parameters for a specific rate
-struct DSPCRateConfig {
+struct SPBEAMRateConfig {
     /// @dev Rate identifier
     bytes32 id;
     /// @dev Minimum rate in basis points
@@ -47,53 +47,53 @@ struct DSPCRateConfig {
 }
 /// @dev Step size in basis points [0-65535]
 
-/// @title Global configuration parameters for DSPC
+/// @title Global configuration parameters for SPBEAM
 /// @dev Used to configure global parameters and collateral-specific settings
-struct DSPCConfig {
+struct SPBEAMConfig {
     /// @dev Time delay between rate updates
     uint256 tau;
     /// @dev Collateral-specific settings
-    DSPCRateConfig[] ilks;
+    SPBEAMRateConfig[] ilks;
     /// @dev Bud to be authed within setup
     address bud;
 }
 /// @dev Array of collateral configurations
 
 /// @title Dynamic Stability Parameter Controller Initialization
-/// @notice Handles initialization and configuration of the DSPC contract
-/// @dev Sets up permissions and configures parameters for the DSPC system
-library DSPCInit {
-    /// @notice Initializes a DSPC instance with the specified configuration
-    /// @dev Sets up permissions between DSPC and core contracts, and configures parameters
+/// @notice Handles initialization and configuration of the SPBEAM contract
+/// @dev Sets up permissions and configures parameters for the SPBEAM system
+library SPBEAMInit {
+    /// @notice Initializes a SPBEAM instance with the specified configuration
+    /// @dev Sets up permissions between SPBEAM and core contracts, and configures parameters
     /// @param dss The DSS (MakerDAO) instance containing core contract references
-    /// @param inst The DSPC instance containing contract addresses
-    /// @param cfg The configuration parameters for DSPC
-    function init(DssInstance memory dss, DSPCInstance memory inst, DSPCConfig memory cfg) internal {
+    /// @param inst The SPBEAM instance containing contract addresses
+    /// @param cfg The configuration parameters for SPBEAM
+    function init(DssInstance memory dss, SPBEAMInstance memory inst, SPBEAMConfig memory cfg) internal {
         // Set up permissions
 
-        // Authorize DSPCMom in DSPC
-        RelyLike(inst.dspc).rely(inst.mom);
+        // Authorize SPBEAMMom in SPBEAM
+        RelyLike(inst.spbeam).rely(inst.mom);
 
-        // Set DSPCMom authority to MCD_ADM
-        DSPCMomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
+        // Set SPBEAMMom authority to MCD_ADM
+        SPBEAMMomLike(inst.mom).setAuthority(dss.chainlog.getAddress("MCD_ADM"));
 
-        // Authorize DSPC in core contracts
-        dss.jug.rely(inst.dspc);
-        dss.pot.rely(inst.dspc);
-        RelyLike(dss.chainlog.getAddress("SUSDS")).rely(inst.dspc);
+        // Authorize SPBEAM in core contracts
+        dss.jug.rely(inst.spbeam);
+        dss.pot.rely(inst.spbeam);
+        RelyLike(dss.chainlog.getAddress("SUSDS")).rely(inst.spbeam);
 
         // Configure global parameters
-        DSPCLike(inst.dspc).file("tau", cfg.tau);
+        SPBEAMLike(inst.spbeam).file("tau", cfg.tau);
 
         // Configure ilks
         for (uint256 i = 0; i < cfg.ilks.length; i++) {
-            DSPCRateConfig memory ilk = cfg.ilks[i];
-            DSPCLike(inst.dspc).file(ilk.id, "max", uint256(ilk.max));
-            DSPCLike(inst.dspc).file(ilk.id, "min", uint256(ilk.min));
-            DSPCLike(inst.dspc).file(ilk.id, "step", uint256(ilk.step));
+            SPBEAMRateConfig memory ilk = cfg.ilks[i];
+            SPBEAMLike(inst.spbeam).file(ilk.id, "max", uint256(ilk.max));
+            SPBEAMLike(inst.spbeam).file(ilk.id, "min", uint256(ilk.min));
+            SPBEAMLike(inst.spbeam).file(ilk.id, "step", uint256(ilk.step));
         }
 
         // Authorize bud
-        DSPCLike(inst.dspc).kiss(cfg.bud);
+        SPBEAMLike(inst.spbeam).kiss(cfg.bud);
     }
 }
