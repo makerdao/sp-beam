@@ -304,8 +304,8 @@ rule file_per_id_revert(bytes32 id, bytes32 what, uint256 data) {
         "file revert rules failed";
 }
 
-ghost mapping(uint256 => uint256) bps_to_ray {
-    init_state axiom forall uint256 i. bps_to_ray[i] == 0;
+ghost mapping(mathint => mathint) bps_to_ray {
+    init_state axiom forall mathint i. bps_to_ray[i] == 0;
 }
 
 // Verify correct storage changes for non-reverting set
@@ -328,7 +328,7 @@ rule set(SPBEAM.ParamChange[] updates) {
     dutyAfter, _rho = jug.ilks(ilk);
 
     // Manually convert all BPS values to RAY after the function call
-    // Store in the ghost mapping for use in the assertions
+    // Store in the ghost mapping to use it in the assertions
     if (updates.length > 0) {
         bps_to_ray[updates[0].bps] = conv.btor(updates[0].bps);
     }
@@ -340,51 +340,49 @@ rule set(SPBEAM.ParamChange[] updates) {
     }
 
     // If DSR is in updates, then its value should match the converted input value
-    assert exists uint256 i. i < updates.length => updates[i].id == DSR() =>
-        dsrAfter == to_mathint(bps_to_ray[updates[i].bps]), "DSR in updates; dsr not set correctly";
+    assert exists uint256 i. i < updates.length && updates[i].id == DSR() =>
+        dsrAfter == bps_to_ray[updates[i].bps], "DSR in updates; dsr not set correctly";
     // If DSR is not in updates, then the value should not change
     assert (forall uint256 i. i < updates.length => updates[i].id != DSR()) =>
         dsrAfter == dsrBefore, "DSR not in updates; dsr changed unexpectedly";
     // If the value of DSR changed, then it should be in updates
     assert dsrAfter != dsrBefore =>
-        (exists uint256 i. i < updates.length => updates[i].id == DSR()), "dsr changed; DSR not in updates";
+        (exists uint256 i. i < updates.length && updates[i].id == DSR()), "dsr changed; DSR not in updates";
     // If the value of DSR did not change, then it should either NOT be in updates or be in updates with the same value
     assert dsrAfter == dsrBefore => (
         (forall uint256 i. i < updates.length => updates[i].id != DSR()) ||
-        (exists uint256 i. i < updates.length => (updates[i].id == DSR() && to_mathint(bps_to_ray[updates[i].bps]) == dsrBefore))
+        (exists uint256 i. i < updates.length && updates[i].id == DSR() && bps_to_ray[updates[i].bps] == dsrBefore)
     ), "dsr not changed; DSR in updates with different value";
 
-
     // If SSR is in updates, then its value should match the converted input value
-    assert exists uint256 i. i < updates.length => updates[i].id == SSR() =>
-        ssrAfter == to_mathint(bps_to_ray[updates[i].bps]), "SSR in updates; ssr not set correctly";
+    assert exists uint256 i. i < updates.length && updates[i].id == SSR() =>
+        ssrAfter == bps_to_ray[updates[i].bps], "SSR in updates; ssr not set correctly";
     // If SSR is not in updates, then the value should not change
     assert (forall uint256 i. i < updates.length => updates[i].id != SSR()) =>
         ssrAfter == ssrBefore, "SSR not in updates; ssr changed unexpectedly";
     // If the value of SSR changed, then it should be in updates
     assert ssrAfter != ssrBefore => (
-        exists uint256 i. i < updates.length => updates[i].id == SSR()
+        exists uint256 i. i < updates.length && updates[i].id == SSR()
     ), "ssr changed; SSR not in updates";
     // If the value of SSR did not change, then it should either NOT be in updates or be in updates with the same value
     assert ssrAfter == ssrBefore => (
         (forall uint256 i. i < updates.length => updates[i].id != SSR()) ||
-        (exists uint256 i. i < updates.length => (updates[i].id == SSR() && to_mathint(bps_to_ray[updates[i].bps]) == ssrBefore))
+        (exists uint256 i. i < updates.length && updates[i].id == SSR() && bps_to_ray[updates[i].bps] == ssrBefore)
     ), "ssr not changed; SSR in updates with different value";
 
-
     // If ilk is in updates, then its duty value should match the converted input value
-    assert exists uint256 i. i < updates.length => updates[i].id == ilk =>
-        dutyAfter == to_mathint(bps_to_ray[updates[i].bps]), "ilk in updates; duty not set correctly";
+    assert exists uint256 i. i < updates.length && updates[i].id == ilk =>
+        dutyAfter == bps_to_ray[updates[i].bps], "ilk in updates; duty not set correctly";
     // If ilk is not in updates, then the value should not change
     assert (forall uint256 i. i < updates.length => updates[i].id != ilk) =>
         dutyAfter == dutyBefore, "ilk not in updates; duty changed unexpectedly";
     // If the value of ilk duty changed, then it should be in updates
     assert dutyAfter != dutyBefore =>
-        (exists uint256 i. i < updates.length => updates[i].id == ilk), "duty changed; ilk not in updates";
+        (exists uint256 i. i < updates.length && updates[i].id == ilk), "duty changed; ilk not in updates";
     // If the value of ilk duty did not change, then it should either NOT be in updates or be in updates with the same value
     assert dutyAfter == dutyBefore => (
         (forall uint256 i. i < updates.length => updates[i].id != ilk) ||
-        (exists uint256 i. i < updates.length => (updates[i].id == ilk && to_mathint(bps_to_ray[updates[i].bps]) == dutyBefore))
+        (exists uint256 i. i < updates.length && updates[i].id == ilk && bps_to_ray[updates[i].bps] == dutyBefore)
     ), "duty not changed; ilk in updates with different value";
 }
 
@@ -417,7 +415,7 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints, uint256[] bp
     bool revert4 = e.block.timestamp < tau() + toc();
     // No updates
     bool revert5 = updates.length == 0;
-    // Sorted elements
+    // Strictly ordered elements
     bool revert6 = idsAsUints.length == 2 ? idsAsUints[0] >= idsAsUints[1] : false;
     bool revert7 = idsAsUints.length == 3 ? (
         idsAsUints[0] >= idsAsUints[1] ||
@@ -435,22 +433,21 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints, uint256[] bp
         set_item_reverted[updates[2].id] = check_item_revert(e, updates[2].id, updates[2].bps);
     }
 
-    bool revert8 = updates.length > 0 ? set_item_reverted[updates[0].id] : false;
-    bool revert9 = updates.length > 1
-        ? set_item_reverted[updates[0].id] || set_item_reverted[updates[1].id]
-        : false;
-    bool revert10 = updates.length > 2
-        ? set_item_reverted[updates[0].id] || set_item_reverted[updates[1].id] || set_item_reverted[updates[2].id]
-        : false;
+    bool revert8 = exists uint256 i. i < updates.length && set_item_reverted[updates[i].id];
 
     set@withrevert(e, updates);
 
-    assert lastReverted <=>
+    assert lastReverted =>
         revert1 || revert2 || revert3 ||
         revert4 || revert5 || revert6 ||
-        revert7 || revert8 || revert9 ||
-        revert10,
-        "set revert rules failed";
+        revert7 || revert8,
+        "set reverted for an unknown reason";
+
+    assert revert1 || revert2 || revert3 ||
+        revert4 || revert5 || revert6 ||
+        revert7 || revert8 =>
+        lastReverted,
+        "set should have reverted";
 }
 
 function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
