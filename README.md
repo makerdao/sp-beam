@@ -82,6 +82,7 @@ The module implements a robust security model:
 - Disabling without GSM delay via SPBEAMMom contract
 - Circuit breaker (halt) functionality
 - All actions emit events for transparency
+- Batch updates must be ordered alphabetically by ID to prevent duplicates
 
 ## License
 
