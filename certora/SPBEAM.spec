@@ -402,19 +402,17 @@ ghost mapping(bytes32 => bool) set_item_reverted {
     init_state axiom forall bytes32 i. set_item_reverted[i] == false;
 }
 
-rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints, uint256[] bpss) {
+rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints) {
     env e;
     bytes32 ilk;
 
     require ilk != DSR() && ilk != SSR();
     require updates.length < 4;
-    require updates.length == bpss.length;
-    require idsAsUints.length == bpss.length;
-    // ID cannot be bytes32(0)
+    require updates.length == idsAsUints.length;
     require forall uint256 i. i < updates.length => (
+        // ID cannot be bytes32(0)
         updates[i].id != EMPTY_BYTES32() &&
-            updates[i].id == to_bytes32(idsAsUints[i]) &&
-            updates[i].bps == to_mathint(bpss[i])
+        updates[i].id == to_bytes32(idsAsUints[i])
     );
     // It is impossible for `toc` to be greater than block.timestamp
     require toc() <= e.block.timestamp;
@@ -428,13 +426,13 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints, uint256[] bp
     // No updates
     bool revert5 = updates.length == 0;
     // Strictly ordered elements
-    bool revert6 = idsAsUints.length == 2 ? idsAsUints[0] >= idsAsUints[1] : false;
-    bool revert7 = idsAsUints.length == 3 ? (
+    bool revert6 = updates.length == 2 ? idsAsUints[0] >= idsAsUints[1] : false;
+    bool revert7 = updates.length == 3 ? (
         idsAsUints[0] >= idsAsUints[1] ||
-        idsAsUints[0] >= idsAsUints[2] ||
         idsAsUints[1] >= idsAsUints[2]
     ) : false;
 
+    // Check if any update would revert
     if (updates.length > 0) {
         set_item_reverted[updates[0].id] = check_item_revert(e, updates[0].id, updates[0].bps);
     }
@@ -444,7 +442,6 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints, uint256[] bp
     if (updates.length > 2) {
         set_item_reverted[updates[2].id] = check_item_revert(e, updates[2].id, updates[2].bps);
     }
-
     bool revert8 = exists uint256 i. i < updates.length && set_item_reverted[updates[i].id];
 
     set@withrevert(e, updates);
