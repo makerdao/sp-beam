@@ -260,9 +260,14 @@ rule file_global_revert(bytes32 what, uint256 data) {
 // Verify correct storage changes for non-reverting file for individual rate parameters
 rule file_per_id(bytes32 id, bytes32 what, uint256 data) {
     env e;
+    bytes32 other;
+    require other != id;
 
     mathint minBefore; mathint maxBefore; mathint stepBefore;
     minBefore, maxBefore, stepBefore = cfgs(id);
+
+    mathint minOtherBefore; mathint maxOtherBefore; mathint stepOtherBefore;
+    minOtherBefore, maxOtherBefore, stepOtherBefore = cfgs(other);
 
     file(e, id, what, data);
 
@@ -275,6 +280,13 @@ rule file_per_id(bytes32 id, bytes32 what, uint256 data) {
     assert what != MAX() => maxAfter == maxBefore, "file did keep unchanged max";
     assert what == STEP() => stepAfter == to_mathint(data), "file did not set step";
     assert what != STEP() => stepAfter == stepBefore, "file did keep unchanged step";
+
+    mathint minOtherAfter; mathint maxOtherAfter; mathint stepOtherAfter;
+    minOtherAfter, maxOtherAfter, stepOtherAfter = cfgs(other);
+
+    assert minOtherAfter == minOtherBefore, "file unexpectedly changed other min";
+    assert maxOtherAfter == maxOtherBefore, "file unexpectedly changed other max";
+    assert stepOtherAfter == stepOtherBefore, "file unexpectedly changed other step";
 }
 
 // Verify revert rules on file for individual rate parameters
