@@ -459,6 +459,10 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints) {
         "set should have reverted";
 }
 
+function abs_diff(mathint a, mathint b) returns mathint {
+    return a > b ? a - b : b - a;
+}
+
 function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
     mathint min; mathint max; mathint step;
     min, max, step = cfgs(id);
@@ -493,7 +497,7 @@ function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
         actualOldBps = oldBps;
     }
 
-    mathint delta = bps > actualOldBps ? bps - actualOldBps : actualOldBps - bps;
+    mathint delta = abs_diff(bps, actualOldBps);
     mathint ray = conv.btor(bps);
 
     bool revertA = step == 0;
@@ -510,10 +514,69 @@ function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
         revertA  || revertB || revertC ||
         revertD  || revertE || revertF ||
         revertG  || revertH || revertI;
-
 }
 
-rule set_current_higher_than_max(SPBEAM.ParamChange[] updates) {
+rule set_invariants_current_within_bounds(SPBEAM.ParamChange[] updates) {
+    env e;
+
+    require updates.length == 1;
+    bytes32 id = updates[0].id;
+    uint256 bps = updates[0].bps;
+
+    bytes32 ilk;
+    require ilk != DSR() && ilk != SSR();
+
+    mathint min; mathint max; mathint step;
+    min, max, step = cfgs(id);
+
+    uint256 dsrBefore = pot.dsr();
+    uint256 ssrBefore = susds.ssr();
+    uint256 dutyBefore; uint256 _rho;
+    dutyBefore, _rho = jug.ilks(ilk);
+
+    mathint dsrBeforeBps = conv.rtob(dsrBefore);
+    mathint ssrBeforeBps = conv.rtob(ssrBefore);
+    mathint dutyBeforeBps = conv.rtob(dutyBefore);
+
+    // Ensure the previous values are within bounds
+    require id == DSR() => dsrBeforeBps >= min && dsrBeforeBps <= max;
+    require id == SSR() => ssrBeforeBps >= min && ssrBeforeBps <= max;
+    require id == ilk => dutyBeforeBps >= min && dutyBeforeBps <= max;
+
+    set(e, updates);
+
+    uint256 dsrAfter = pot.dsr();
+    uint256 ssrAfter = susds.ssr();
+    uint256 dutyAfter;
+    dutyAfter, _rho = jug.ilks(ilk);
+
+    mathint dsrAfterBps = conv.rtob(dsrAfter);
+    mathint ssrAfterBps = conv.rtob(ssrAfter);
+    mathint dutyAfterBps = conv.rtob(dutyAfter);
+
+    // Set cannot set the value of the rate greater than max
+    assert id == DSR() => dsrAfterBps <= max, "dsrAfterBps > max";
+    // Set cannot set the value of the rate lower than min
+    assert id == DSR() => dsrAfterBps >= min, "dsrAfterBps < min";
+    // Set cannot set the value of the rate to change by more than step
+    assert id == DSR() => abs_diff(dsrAfterBps, dsrBeforeBps) <= step, "abs(dsrAfterBps - dsrBeforeBps) > step";
+
+    // Set cannot set the value of the rate greater than max
+    assert id == SSR() => ssrAfterBps <= max, "ssrAfterBps > max";
+    // Set cannot set the value of the rate lower than min
+    assert id == SSR() => ssrAfterBps >= min, "ssrAfterBps < min";
+    // Set cannot set the value of the rate to change by more than step
+    assert id == SSR() => abs_diff(ssrAfterBps, ssrBeforeBps) <= step, "abs(ssrAfterBps - ssrBeforeBps) > step";
+
+    // Set cannot set the value of the rate greater than max
+    assert id == ilk => dutyAfterBps <= max, "dutyAfterBps > max";
+    // Set cannot set the value of the rate lower than min
+    assert id == ilk => dutyAfterBps >= min, "dutyAfterBps < min";
+    // Set cannot set the value of the rate to change by more than step
+    assert id == ilk => abs_diff(dutyAfterBps, dutyBeforeBps) <= step, "abs(dutyAfterBps - dutyBeforeBps) > step";
+}
+
+rule set_invariants_current_higher_than_max(SPBEAM.ParamChange[] updates) {
     env e;
 
     require updates.length == 1;
@@ -550,7 +613,7 @@ rule set_current_higher_than_max(SPBEAM.ParamChange[] updates) {
     assert id == ilk   => dutyAfter == bps_to_ray[bps] && bps >= max - step && bps <= max, "ilk duty not within bounds";
 }
 
-rule set_current_lower_than_min(SPBEAM.ParamChange[] updates) {
+rule set_invariants_current_lower_than_min(SPBEAM.ParamChange[] updates) {
     env e;
 
     require updates.length == 1;
