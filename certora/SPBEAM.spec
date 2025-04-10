@@ -325,7 +325,7 @@ rule set(SPBEAM.ParamChange[] updates) {
     env e;
     bytes32 ilk;
     require ilk != DSR() && ilk != SSR();
-    require updates.length > 0 && updates.length < 4;
+    require updates.length < 4;
 
     mathint dsrBefore = pot.dsr();
     mathint ssrBefore = susds.ssr();
