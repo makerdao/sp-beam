@@ -16,7 +16,6 @@ contract ConvMock {
 
     function btor(uint256 bps) public view virtual returns (uint256 ray) {
         require(bps <= MAX_BPS_IN);
-
         assembly {
             let offset := mul(bps, 8) // Each rate is 8 bytes
             let wordPos := div(offset, 32) // Which 32-byte word to read
