@@ -27,8 +27,8 @@ methods {
     function pot.rho() external returns (uint256) envfree;
     function pot.wards(address) external returns (uint256) envfree;
 
+    function susds.rho() external returns (uint64) envfree;
     function susds.ssr() external returns (uint256) envfree;
-    function susds.rho() external returns (uint256) envfree;
     function susds.wards(address) external returns (uint256) envfree;
 
     function vat.Line() external returns (uint256) envfree;
@@ -425,12 +425,9 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints) {
     bool revert4 = e.block.timestamp < tau() + toc();
     // No updates
     bool revert5 = updates.length == 0;
-    // Strictly ordered elements
-    bool revert6 = updates.length == 2 ? idsAsUints[0] >= idsAsUints[1] : false;
-    bool revert7 = updates.length == 3 ? (
-        idsAsUints[0] >= idsAsUints[1] ||
-        idsAsUints[1] >= idsAsUints[2]
-    ) : false;
+    // Elements are not strictly ordered
+    bool revert6 = updates.length > 1 &&
+        (exists uint256 i. exists uint256 j. i < updates.length && j == i - 1 && idsAsUints[j] >= idsAsUints[i]);
 
     // Check if any update would revert
     if (updates.length > 0) {
@@ -442,19 +439,19 @@ rule set_revert(SPBEAM.ParamChange[] updates, uint256[] idsAsUints) {
     if (updates.length > 2) {
         set_item_reverted[updates[2].id] = check_item_revert(e, updates[2].id, updates[2].bps);
     }
-    bool revert8 = exists uint256 i. i < updates.length && set_item_reverted[updates[i].id];
+    bool revert7 = exists uint256 i. i < updates.length && set_item_reverted[updates[i].id];
 
     set@withrevert(e, updates);
 
     assert lastReverted =>
         revert1 || revert2 || revert3 ||
         revert4 || revert5 || revert6 ||
-        revert7 || revert8,
+        revert7,
         "set reverted for an unknown reason";
 
     assert revert1 || revert2 || revert3 ||
         revert4 || revert5 || revert6 ||
-        revert7 || revert8 =>
+        revert7 =>
         lastReverted,
         "set should have reverted";
 }
@@ -464,40 +461,28 @@ function abs_diff(mathint a, mathint b) returns mathint {
 }
 
 function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
+    uint256 duty; mathint _rho;
+    duty, _rho = jug.ilks(id);
+
+    mathint oldBps = conv.rtob(
+        id == DSR() ? pot.dsr() :
+            id == SSR() ? susds.ssr() :
+                duty
+    );
+
     mathint min; mathint max; mathint step;
     min, max, step = cfgs(id);
 
-    // min <= max is enforced in the implementation
+    // min <= max is enforced in the implementation, so max > min is not achievable
     require min <= max;
 
-    mathint oldBps;
-    if (id == DSR()) {
-        // IF block.timestamp < rho, drip will revert
-        require(e.block.timestamp >= pot.rho());
-        oldBps = conv.rtob(pot.dsr());
-    } else if (id == SSR()) {
-        // IF block.timestamp <= rho, drip will not update rho and file will revert
-        require(e.block.timestamp > pot.rho());
-        oldBps = conv.rtob(susds.ssr());
-    } else {
-        uint256 duty; mathint rho;
-        duty, rho = jug.ilks(id);
-        // IF rho >= block.timestamp, drip will revert
-        require(e.block.timestamp >= rho);
-        oldBps = conv.rtob(duty);
-    }
-
     // We need a second variable because it's not possible to reassign variables in CVL
-    mathint actualOldBps;
-    if (oldBps < min) {
-        actualOldBps = min;
-    } else if (oldBps > max) {
-        actualOldBps = max;
-    } else {
-        actualOldBps = oldBps;
-    }
+    // Clamp oldBps between min and max using a nested ternary operator
+    mathint normalizedOldBps = oldBps < min ? min :
+                                   oldBps > max ? max :
+                                       oldBps;
 
-    mathint delta = abs_diff(bps, actualOldBps);
+    mathint delta = abs_diff(bps, normalizedOldBps);
     mathint ray = conv.btor(bps);
 
     bool revertA = step == 0;
@@ -508,12 +493,15 @@ function check_item_revert(env e, bytes32 id, uint256 bps) returns bool {
     bool revertF = bps > conv.MAX_BPS_IN();
     bool revertG = id == DSR() && pot.wards(currentContract) != 1;
     bool revertH = id == SSR() && susds.wards(currentContract) != 1;
-    bool revertI = id != DSR() && id != SSR() && jug.wards(currentContract) != 1;
+    // sUSDS assumes block.timestamp <= max_uint64
+    bool revertI = id == SSR() && e.block.timestamp > max_uint64;
+    bool revertJ = id != DSR() && id != SSR() && jug.wards(currentContract) != 1;
 
     return
         revertA  || revertB || revertC ||
         revertD  || revertE || revertF ||
-        revertG  || revertH || revertI;
+        revertG  || revertH || revertI ||
+        revertJ;
 }
 
 rule set_invariants_current_within_bounds(SPBEAM.ParamChange[] updates) {

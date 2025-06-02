@@ -204,12 +204,14 @@ contract Pot is LibNote {
 
     // --- Savings Rate Accumulation ---
     function drip() external note returns (uint256 tmp) {
-        require(now >= rho, "Pot/invalid-now");
-        // Note: ignoring rpow for Certora
+        // NOTE: using mocked `drip` function because this method is not a subject of the formal verification
+        // NOTE: this line is needed to prevent `file` above from reverting
+        rho = now;
+        // require(now >= rho, "Pot/invalid-now");
         // tmp = rmul(rpow(dsr, now - rho, ONE), chi);
         // uint chi_ = sub(tmp, chi);
         // chi = tmp;
-        rho = now;
+        // rho = now;
         // vat.suck(address(vow), address(this), mul(Pie, chi));
     }
 

@@ -175,11 +175,14 @@ contract Jug is LibNote {
 
     // --- Stability Fee Collection ---
     function drip(bytes32 ilk) external note returns (uint256 rate) {
-        require(now >= ilks[ilk].rho, "Jug/invalid-now");
+        // NOTE: using mocked `drip` function because this method is not a subject of the formal verification
+        // NOTE: this line is needed to prevent `file` above from reverting
+        ilks[ilk].rho = now;
+        // require(now >= ilks[ilk].rho, "Jug/invalid-now");
         // (, uint prev) = vat.ilks(ilk);
         // Note: ignoring rpow for Certora
         // rate = rmul(rpow(add(base, ilks[ilk].duty), now - ilks[ilk].rho, ONE), prev);
         // vat.fold(ilk, vow, diff(rate, prev));
-        ilks[ilk].rho = now;
+        // ilks[ilk].rho = now;
     }
 }
