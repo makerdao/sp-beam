@@ -637,3 +637,20 @@ rule set_invariants_current_lower_than_min(SPBEAM.ParamChange[] updates) {
     assert id == SSR() => ssrAfter  == bps_to_ray[bps] && bps >= min && bps <= min + step, "ssr not within bounds";
     assert id == ilk   => dutyAfter == bps_to_ray[bps] && bps >= min && bps <= min + step, "ilk duty not within bounds";
 }
+
+
+rule config_invariants_min_less_than_or_equal_max(bytes32 id, bytes32 what, uint256 val) {
+    env e;
+
+    uint16 pmin; uint16 pmax; uint16 pstep;
+    pmin, pmax, pstep = cfgs(id);
+
+    require pmin <= pmax;
+
+    file(e, id, what, val);
+
+    uint16 min; uint16 max; uint16 step;
+    min, max, step = cfgs(id);
+
+    assert min <= max, "Configuration min <= max should hold in all cases";
+}
