@@ -43,8 +43,12 @@ contract InitCaller {
     }
 }
 
-contract MockBrokenConv is ConvMock {
-    function btor(uint256 /* bps */ ) public pure override returns (uint256) {
+contract MockBrokenConv {
+    function rtob(uint256 /* ray */ ) public pure returns (uint256) {
+        return 0;
+    }
+
+    function btor(uint256 /* bps */ ) public pure returns (uint256) {
         return 0;
     }
 }
